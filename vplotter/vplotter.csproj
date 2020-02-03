@@ -6,6 +6,7 @@
         <PublishTrimmed>true</PublishTrimmed>
         <PublishSingleFile Condition=" '$(Configuration)'=='Release' ">true</PublishSingleFile>
         <RuntimeIdentifier>linux-arm</RuntimeIdentifier>
+        <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
