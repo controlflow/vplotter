@@ -24,6 +24,12 @@ namespace VPlotterCore
       var controller = new GpioController(PinNumberingScheme.Board);
       var stopwatch = Stopwatch.StartNew();
 
+      //Thread.SpinWait();
+
+      var thread = new Thread(() => { });
+      thread.Priority = ThreadPriority.Highest;
+      thread.Name = "Stepper Worker";
+
 
       const int dirPin = 15;
       const int dirPin2 = 18;
