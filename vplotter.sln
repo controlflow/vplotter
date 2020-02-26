@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vmotion", "vmotion\vmotion.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vmotion.tests", "vmotion.tests\vmotion.tests.csproj", "{9088CB8F-E8E9-4341-99F3-C9A26122EC02}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vsimulator", "vsimulator\vsimulator.csproj", "{1256446F-AF86-48F8-96A4-C3387A38F1D9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{9088CB8F-E8E9-4341-99F3-C9A26122EC02}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9088CB8F-E8E9-4341-99F3-C9A26122EC02}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9088CB8F-E8E9-4341-99F3-C9A26122EC02}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1256446F-AF86-48F8-96A4-C3387A38F1D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1256446F-AF86-48F8-96A4-C3387A38F1D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1256446F-AF86-48F8-96A4-C3387A38F1D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1256446F-AF86-48F8-96A4-C3387A38F1D9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
