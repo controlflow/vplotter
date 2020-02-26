@@ -1,4 +1,6 @@
-﻿namespace VMotion
+﻿using System.Runtime.Intrinsics.X86;
+
+namespace VMotion
 {
   public interface IStepperOutput
   {

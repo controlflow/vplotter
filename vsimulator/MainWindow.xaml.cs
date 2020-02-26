@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace VSimulator
@@ -16,34 +17,42 @@ namespace VSimulator
     private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
     {
       myModel = new VPlotterModel(Host.RenderSize);
+      myModel.GondolaPositionChanged += delegate
+      {
+        Ropes.Data = new PathGeometry {
+          Figures = {
+            new PathFigure {
+              StartPoint = new Point(x: 0, y: 0),
+              IsFilled = false,
+              IsClosed = false,
+              Segments = {
+                new LineSegment(myModel.GondolaPosition, isStroked: true),
+                new LineSegment(myModel.RightHookLocation, isStroked: true)
+              }
+            }
+          }
+        };
+      };
     }
-  }
 
-  public class PlotterDrawingHost : FrameworkElement
-  {
-    private readonly VisualCollection myChildren;
-
-    public PlotterDrawingHost()
+    private void LeftStepperMinus(object sender, EventArgs e)
     {
-      myChildren = new VisualCollection(this);
-
-      myChildren.Add(CreateDrawingVisualRectangle());
+      myModel.DoStep(Stepper.Left, Direction.Backward);
     }
 
-    private static DrawingVisual CreateDrawingVisualRectangle()
+    private void LeftStepperPlus(object sender, EventArgs e)
     {
-      var drawingVisual = new DrawingVisual();
-      var drawingContext = drawingVisual.RenderOpen();
-
-      var rect = new Rect(new Point(160, 100), new Size(320, 80));
-      drawingContext.DrawRectangle(Brushes.LightBlue, (Pen)null, rect);
-
-      drawingContext.Close();
-
-      return drawingVisual;
+      myModel.DoStep(Stepper.Left, Direction.Forward);
     }
 
-    protected override int VisualChildrenCount => myChildren.Count;
-    protected override Visual GetVisualChild(int index) => myChildren[index];
+    private void RightStepperMinus(object sender, EventArgs e)
+    {
+      myModel.DoStep(Stepper.Right, Direction.Backward);
+    }
+
+    private void RightStepperPlus(object sender, EventArgs e)
+    {
+      myModel.DoStep(Stepper.Right, Direction.Forward);
+    }
   }
 }
