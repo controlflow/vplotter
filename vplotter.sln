@@ -2,6 +2,10 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vplotter", "vplotter\vplotter.csproj", "{34769F9A-0503-429C-8C2A-0119C71E91FF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vmotion", "vmotion\vmotion.csproj", "{30FFB786-2DCD-4EED-AD5F-C63FF880A715}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vmotion.tests", "vmotion.tests\vmotion.tests.csproj", "{9088CB8F-E8E9-4341-99F3-C9A26122EC02}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +16,13 @@ Global
 		{34769F9A-0503-429C-8C2A-0119C71E91FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{34769F9A-0503-429C-8C2A-0119C71E91FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{34769F9A-0503-429C-8C2A-0119C71E91FF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{30FFB786-2DCD-4EED-AD5F-C63FF880A715}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30FFB786-2DCD-4EED-AD5F-C63FF880A715}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30FFB786-2DCD-4EED-AD5F-C63FF880A715}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30FFB786-2DCD-4EED-AD5F-C63FF880A715}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9088CB8F-E8E9-4341-99F3-C9A26122EC02}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9088CB8F-E8E9-4341-99F3-C9A26122EC02}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9088CB8F-E8E9-4341-99F3-C9A26122EC02}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9088CB8F-E8E9-4341-99F3-C9A26122EC02}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
