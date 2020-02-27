@@ -14,11 +14,17 @@ namespace VSimulator
       InitializeComponent();
     }
 
+    private Point myBefore;
+
     private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
     {
       myModel = new VPlotterModel(Host.RenderSize);
+      myBefore = myModel.GondolaPosition;
+
       myModel.GondolaPositionChanged += delegate
       {
+
+
         Ropes.Data = new PathGeometry {
           Figures = {
             new PathFigure {
@@ -32,6 +38,9 @@ namespace VSimulator
             }
           }
         };
+
+        Host.DrawLine(myBefore, myModel.GondolaPosition);
+        myBefore = myModel.GondolaPosition;
       };
     }
 

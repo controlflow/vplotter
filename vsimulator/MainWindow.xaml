@@ -3,7 +3,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:vsimulator"
         xmlns:vs="clr-namespace:VSimulator"
         mc:Ignorable="d"
         Title="V-Plotter simulator"
@@ -35,16 +34,6 @@
           StrokeDashArray="3 1"
           Stroke="Gray" Margin="10"
           x:Name="Ropes">
-      <Path.Data>
-        <PathGeometry>
-          <PathGeometry.Figures>
-            <PathFigure StartPoint="0,0" IsFilled="False" IsClosed="False">
-              <LineSegment Point="100,100" />
-              <LineSegment Point="400,0" />
-            </PathFigure>
-          </PathGeometry.Figures>
-        </PathGeometry>
-     </Path.Data>
     </Path>
 
     <Rectangle Grid.Column="1" Stroke="Black" Margin="10">

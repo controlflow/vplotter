@@ -1,33 +1,61 @@
+using System;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace VSimulator
 {
   public class PlotterDrawingHost : FrameworkElement
   {
-    private readonly VisualCollection myChildren;
+    private readonly DrawingVisual myDrawingVisual;
+    private RenderTargetBitmap myRenderTargetBitmap;
 
     public PlotterDrawingHost()
     {
-      myChildren = new VisualCollection(this);
-
-      myChildren.Add(CreateDrawingVisualRectangle());
+      myDrawingVisual = new DrawingVisual();
+      
+      Loaded += Load;
     }
 
-    private DrawingVisual CreateDrawingVisualRectangle()
+    void Load(object o, EventArgs e)
     {
-      var drawingVisual = new DrawingVisual();
-      var drawingContext = drawingVisual.RenderOpen();
+      var renderSize = RenderSize;
 
-      var rect = new Rect(new Point(160, 100), new Size(320, 80));
-      drawingContext.DrawRectangle(Brushes.LightBlue, (Pen)null, rect);
+      var source = PresentationSource.FromVisual(this);
+      if (source == null) throw new InvalidOperationException();
 
+      var xScale = source.CompositionTarget.TransformToDevice.M11;
+      var yScale = source.CompositionTarget.TransformToDevice.M22;
+
+      myRenderTargetBitmap = new RenderTargetBitmap(
+        pixelWidth: (int) (renderSize.Width * xScale),
+        pixelHeight: (int) (renderSize.Height * yScale),
+        dpiX: 96.0 * xScale,
+        dpiY: 96.0 * yScale,
+        pixelFormat: PixelFormats.Pbgra32);
+    }
+
+    protected override void OnRender(DrawingContext drawingContext)
+    {
+      if (myRenderTargetBitmap == null) return;
+
+      drawingContext.DrawImage(
+        myRenderTargetBitmap, new Rect(0, 0, myRenderTargetBitmap.Width, myRenderTargetBitmap.Height));
+      //base.OnRender(drawingContext);
+    }
+
+    public void DrawLine(Point from, Point to)
+    {
+      using var drawingContext = myDrawingVisual.RenderOpen();
+      drawingContext.DrawLine(new Pen(Brushes.Brown, thickness: 1), from, to);
       drawingContext.Close();
 
-      return drawingVisual;
+      myRenderTargetBitmap.Render(myDrawingVisual);
+
+      InvalidateVisual();
     }
 
-    protected override int VisualChildrenCount => myChildren.Count;
-    protected override Visual GetVisualChild(int index) => myChildren[index];
+    protected override int VisualChildrenCount => 0;
+    //protected override Visual GetVisualChild(int index) => myChildren[index];
   }
 }
