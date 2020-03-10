@@ -3,10 +3,12 @@
     <PropertyGroup>
         <TargetFramework>netcoreapp3.1</TargetFramework>
         <Nullable>enable</Nullable>
+        <RootNamespace>VMotion.Tests</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\vmotion\vmotion.csproj" />
+      <ProjectReference Include="..\vplotter\vplotter.csproj" />
     </ItemGroup>
 
     <ItemGroup>

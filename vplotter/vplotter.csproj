@@ -5,8 +5,9 @@
         <TargetFramework>netcoreapp3.1</TargetFramework>
         <PublishTrimmed>true</PublishTrimmed>
         <PublishSingleFile Condition=" '$(Configuration)'=='Release' ">true</PublishSingleFile>
-        <RuntimeIdentifier>linux-arm</RuntimeIdentifier>
+<!--        <RuntimeIdentifier>linux-arm</RuntimeIdentifier>-->
         <Nullable>enable</Nullable>
+        <RootNamespace>VPlotter</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

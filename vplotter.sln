@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vmotion.tests", "vmotion.te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vsimulator", "vsimulator\vsimulator.csproj", "{1256446F-AF86-48F8-96A4-C3387A38F1D9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vplotter.console", "vplotter.console\vplotter.console.csproj", "{580F7186-4CA5-48CC-9350-403833954E3B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{1256446F-AF86-48F8-96A4-C3387A38F1D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1256446F-AF86-48F8-96A4-C3387A38F1D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1256446F-AF86-48F8-96A4-C3387A38F1D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{580F7186-4CA5-48CC-9350-403833954E3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{580F7186-4CA5-48CC-9350-403833954E3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{580F7186-4CA5-48CC-9350-403833954E3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{580F7186-4CA5-48CC-9350-403833954E3B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
