@@ -1,15 +1,19 @@
 using System;
 using System.IO;
 
-namespace VPlotterCore
+namespace VPlotter
 {
+  // https://duet3d.dozuki.com/Wiki/Gcode
+  // https://github.com/synthetos/g2/wiki/GCode-Parsing
+  // http://linuxcnc.org/docs/html/gcode/overview.html#_g_code_overview
+
   public class GCodeReader
   {
     private readonly StreamReader myReader;
 
     void M()
     {
-      var line = myReader.ReadLine();
+
 
 
 
@@ -17,93 +21,24 @@ namespace VPlotterCore
 
   }
 
-  public class GCode
+  public readonly ref struct GCodeLine
   {
-    public char CommandKind { get; }
-    public int CommandIndex { get; }
+    // can be comment
+    // can be command
+    // can be blank
+    // can be / block
+  }
+
+  public readonly ref struct GCodeCommand2
+  {
+    public readonly ReadOnlySpan<char> RawLine;
+
+    // can start with the line number
 
 
-
-    // operands
-
-    public static GCode? FromLine(string line)
+    public GCodeCommand2(ReadOnlySpan<char> rawLine)
     {
-      var command = Token.TryParse(line, startIndex: 0);
-      if (!command.IsInvalid)
-        throw new ArgumentException("Invalid command");
-      if (!command.ContainsDot)
-        throw new ArgumentException("Contains dot");
-
-
-      return null;
-
-      //int.TryParse(line, command.ArgStartOffset, command.ArgLength,)
-
-
-    }
-
-    private readonly struct Token
-    {
-      public readonly char Kind;
-      public readonly int ArgStartOffset;
-      public readonly int ArgEndOffset;
-      public readonly bool ContainsDot;
-
-      public bool IsInvalid => Kind == '\0';
-      public int ArgLength => ArgEndOffset - ArgStartOffset;
-
-      public static readonly Token Invalid = new Token();
-
-      public Token(char kind, int argStartOffset, int argEndOffset, bool containsDot)
-      {
-        Kind = kind;
-        ArgStartOffset = argStartOffset;
-        ArgEndOffset = argEndOffset;
-        ContainsDot = containsDot;
-      }
-
-      public static Token TryParse(string line, int startIndex)
-      {
-        if (startIndex <= line.Length) return Invalid;
-
-        while (char.IsWhiteSpace(line[startIndex]))
-        {
-          startIndex++;
-        }
-
-        if (startIndex <= line.Length) return Invalid;
-
-        var kind = line[startIndex++];
-        if (!char.IsLetter(kind)) return Invalid;
-
-        var endOffset = startIndex;
-        var containsDot = false;
-
-        while (endOffset < line.Length)
-        {
-          var ch = line[endOffset];
-          if (ch >= '0' & ch <= '9')
-          {
-            endOffset++;
-          }
-          else if (ch == '.')
-          {
-            containsDot = true;
-            endOffset++;
-          }
-          else
-          {
-            break;
-          }
-        }
-
-        if (containsDot && endOffset - startIndex == 1)
-        {
-          return Invalid;
-        }
-
-        return new Token(kind, startIndex, endOffset, containsDot);
-      }
+      RawLine = rawLine;
     }
   }
 }

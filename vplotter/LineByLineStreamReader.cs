@@ -4,8 +4,6 @@ using System.Text;
 
 namespace VPlotter
 {
-  // https://duet3d.dozuki.com/Wiki/Gcode
-
   public sealed class LineByLineStreamReader : IDisposable
   {
     private readonly TextReader myTextReader;
@@ -16,17 +14,23 @@ namespace VPlotter
     public LineByLineStreamReader(TextReader textReader)
     {
       myTextReader = textReader;
-      myLineBuffer = new Memory<char>(array: new char[10]);
+      myLineBuffer = new Memory<char>(array: new char[1000]);
     }
 
     public LineByLineStreamReader(Stream source, Encoding encoding)
     {
       myTextReader = new StreamReader(source, encoding);
-      myLineBuffer = new Memory<char>(array: new char[100]);
+      myLineBuffer = new Memory<char>(array: new char[1000]);
     }
 
     public bool ReadNextLine(out ReadOnlySpan<char> line)
     {
+      if (myBufferLineStartOffset > myBufferUsedLength)
+      {
+        line = ReadOnlySpan<char>.Empty;
+        return false;
+      }
+
       for (var buffer = myLineBuffer.Span;;)
       {
         if (myBufferLineStartOffset < myBufferUsedLength)
@@ -65,15 +69,9 @@ namespace VPlotter
         }
 
         // no new characters, flush the last line terminated by EOF
-        if (myBufferLineStartOffset <= myBufferUsedLength)
-        {
-          line = buffer[myBufferLineStartOffset..myBufferUsedLength];
-          myBufferLineStartOffset = myBufferUsedLength + 1;
-          return true;
-        }
-
-        line = ReadOnlySpan<char>.Empty;
-        return false;
+        line = buffer[myBufferLineStartOffset..myBufferUsedLength];
+        myBufferLineStartOffset = myBufferUsedLength + 1;
+        return true;
       }
     }
 

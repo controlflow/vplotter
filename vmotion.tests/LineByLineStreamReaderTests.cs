@@ -43,8 +43,6 @@ namespace VMotion.Tests
         addedLines.Add(string.Empty);
       }
 
-      Console.WriteLine(builder.ToString().Replace("\r", "\\r").Replace("\n", "\\n"));
-
       using var stringReader = new StringReader(builder.ToString());
       using var reader = new LineByLineStreamReader(stringReader);
 
