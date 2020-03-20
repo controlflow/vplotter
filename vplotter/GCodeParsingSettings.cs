@@ -6,7 +6,8 @@ namespace VPlotter
       caseNormalization: GCodeCaseNormalization.ToUppercase);
 
     public GCodeParsingSettings(
-      GCodeCaseNormalization caseNormalization = GCodeCaseNormalization.DoNotTouch)
+      GCodeCaseNormalization caseNormalization = GCodeCaseNormalization.DoNotTouch,
+      bool allowWhitespaceInFieldNumbers = false)
     {
       CaseNormalization = caseNormalization;
     }

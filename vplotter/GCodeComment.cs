@@ -1,7 +1,9 @@
 using System;
+using System.Runtime.InteropServices;
 
 namespace VPlotter
 {
+  [StructLayout(LayoutKind.Auto)]
   public readonly ref struct GCodeComment
   {
     public readonly ReadOnlySpan<char> Raw;

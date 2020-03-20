@@ -7,7 +7,7 @@ namespace VPlotter
     // [8 bits] command, [8 bits] subcode, [16 bits] code
     public readonly GCode GCode;
 
-    public char Command => (char) ((uint) GCode >> 24);
+    public char Word => (char) ((uint) GCode >> 24);
     public int Code => (ushort) GCode;
     public int Subcode => (byte) ((uint) GCode >> 16);
 
@@ -37,16 +37,16 @@ namespace VPlotter
       }
     }
 
-    public void Deconstruct(out char command, out int code)
+    public void Deconstruct(out char word, out int code)
     {
       var gCode = (uint) GCode;
-      command = (char) (gCode >> 24);
+      word = (char) (gCode >> 24);
       code = (ushort) gCode;
     }
 
-    public void Deconstruct(out char command)
+    public void Deconstruct(out char word)
     {
-      command = (char) ((uint) GCode >> 24);
+      word = (char) ((uint) GCode >> 24);
     }
   }
 

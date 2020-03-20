@@ -1,21 +1,26 @@
 using System;
-using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace VPlotter
 {
+  [StructLayout(LayoutKind.Auto)]
   public readonly ref struct GCodeField
   {
     public readonly ReadOnlySpan<char> Raw;
     public readonly Kind ArgumentKind;
 
+    private readonly int myHigh, myLow;
+
     private GCodeField(ReadOnlySpan<char> field, Kind argumentKind)
     {
       Raw = field;
       ArgumentKind = argumentKind;
+      myHigh = default;
+      myLow = default;
     }
 
     public bool IsValid => Raw.Length > 0;
-    public char Command => Raw.Length > 0 ? Raw[0] : '\0';
+    public char Word => Raw.Length > 0 ? Raw[0] : '\0';
 
     public ReadOnlySpan<char> RawArgument => Raw.Slice(start: 1);
 
@@ -76,21 +81,16 @@ namespace VPlotter
       get { return ReadOnlySpan<char>.Empty; }
     }
 
-    public enum Kind
+    public enum Kind : byte
     {
       NoArgument, // X
       Integer, // X123
       Real, // X123.45
-      String // X"aaa"
+      String, // X"aaa"
+      ParsingError // X-
     }
 
-    public override string ToString()
-    {
-      return "aaaa";
-
-      // todo:
-      //return base.ToString();
-    }
+    public override string ToString() => Raw.ToString();
 
     public static GCodeField TryParse(ReadOnlySpan<char> line, out ReadOnlySpan<char> tail, GCodeParsingSettings settings)
     {
@@ -100,34 +100,91 @@ namespace VPlotter
         return default;
       }
 
-      var ch = line[0];
-      if (ch >= 'A' && ch <= 'Z')
+      var word = line[0];
+      if (word >= 'A' && word <= 'Z')
       {
         if (settings.CaseNormalization == GCodeCaseNormalization.ToLowercase)
         {
-          ch += '\x0032';
+          word += '\x0032';
         }
       }
-      else if (ch >= 'a' && ch <= 'z')
+      else if (word >= 'a' && word <= 'z')
       {
         if (settings.CaseNormalization == GCodeCaseNormalization.ToUppercase)
         {
-          ch -= '\x0032';
+          word -= '\x0032';
         }
       }
       else
       {
+        // todo: allow some other symbols?
         tail = line;
         return default;
       }
 
-      var i = 1;
-      for (; i < line.Length; i++)
+      var index = 1;
+      line.SkipWhitespace(ref index);
+
+      if (index == line.Length)
       {
-        var c = line[i];
-        if (c != ' ' && c != '\t') break;
+        tail = ReadOnlySpan<char>.Empty;
+        return new GCodeField(line, Kind.NoArgument);
       }
 
+      var first = line[index];
+      if (first == '-' || first == '+')
+      {
+        index++;
+        line.SkipWhitespace(ref index);
+
+        if (index == line.Length)
+        {
+          tail = ReadOnlySpan<char>.Empty;
+          return new GCodeField(line, Kind.ParsingError);
+        }
+      }
+
+      var integer = ScanInteger(ref index, line);
+      if (integer >= 0) // X123
+      {
+
+
+        if (index == line.Length)
+        {
+          tail = ReadOnlySpan<char>.Empty;
+          return new GCodeField(line, Kind.ParsingError);
+        }
+      }
+      else // can be X.123
+      {
+//
+      }
+
+// Evaluate expression + .NET Core!!!
+
+
+
+      // todo: skip leading 0
+      static int ScanInteger(ref int index, ReadOnlySpan<char> span)
+      {
+        var value = -1;
+
+        for (; index < span.Length; index++)
+        {
+          var c = span[index];
+          if (c >= '0' && c <= '9') break;
+
+          var digit = c - '0';
+
+          if (value == -1)
+          {
+            //2147483647;
+          }
+
+        }
+
+        return value;
+      }
 
 
       // skip ws
@@ -142,7 +199,7 @@ namespace VPlotter
 
 
       tail = line;
-      return new GCodeField(line.Slice(0, 1));
+      return default; // new GCodeField(line.Slice(0, 1));
     }
 
 
