@@ -27,8 +27,8 @@ namespace VMotion.Tests
       Assert.IsTrue(field.IsValid);
       Assert.IsFalse(field.HasArgument);
       Assert.AreEqual('X', field.Word);
-      Assert.AreEqual('-', field.RawArgument.ToString());
-      Assert.AreEqual("Y", tail.ToString());
+      Assert.AreEqual("", field.RawArgument.ToString());
+      Assert.AreEqual("  -Y", tail.ToString());
     }
 
     [Test]
@@ -39,22 +39,23 @@ namespace VMotion.Tests
 
       Assert.IsTrue(trivial.IsValid);
       Assert.IsFalse(trivial.HasArgument);
-      Assert.AreEqual(trivial.Word, 'X');
-      Assert.AreEqual(tail.ToString(), " \t");
+      Assert.AreEqual('X', trivial.Word);
+      Assert.AreEqual("X", trivial.Raw.ToString());
+      Assert.AreEqual("", trivial.RawArgument.ToString());
+      Assert.AreEqual("", trivial.StringArgument.ToString());
+      Assert.AreEqual(" \t", tail.ToString());
     }
 
     [Test]
     public void CaseToNormalization()
     {
       var toUpper = GCodeField.TryParse(
-        "x".AsSpan(), out _,
-        new GCodeParsingSettings(caseNormalization: GCodeCaseNormalization.ToUppercase));
+        "x".AsSpan(), out _, new GCodeParsingSettings(caseNormalization: GCodeCaseNormalization.ToUppercase));
 
       Assert.AreEqual('X', toUpper.Word);
 
       var toLower = GCodeField.TryParse(
-        "X".AsSpan(), out _,
-        new GCodeParsingSettings(caseNormalization: GCodeCaseNormalization.ToLowercase));
+        "X".AsSpan(), out _, new GCodeParsingSettings(caseNormalization: GCodeCaseNormalization.ToLowercase));
 
       Assert.AreEqual(toLower.Word, 'x');
     }
@@ -85,12 +86,30 @@ namespace VMotion.Tests
       Assert.IsTrue(field.IsValid);
       Assert.IsTrue(field.HasArgument);
       Assert.AreEqual('Y', field.Word);
+      Assert.AreEqual("Y-42", field.Raw.ToString());
       Assert.AreEqual("-42", field.RawArgument.ToString());
       Assert.AreEqual(-42, field.IntArgument);
       Assert.AreEqual(-42f, field.FloatArgument);
       Assert.AreEqual(-42d, field.DoubleValue);
       Assert.AreEqual("-42", field.StringArgument.ToString());
       Assert.AreEqual("tail", tail.ToString());
+    }
+
+    [Test]
+    public void IntArgument03()
+    {
+      var field = GCodeField.TryParse("Y + 2147483647 tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsTrue(field.HasArgument);
+      Assert.AreEqual('Y', field.Word);
+      Assert.AreEqual("Y + 2147483647", field.Raw.ToString());
+      Assert.AreEqual(" + 2147483647", field.RawArgument.ToString());
+      Assert.AreEqual(2147483647, field.IntArgument);
+      Assert.AreEqual(2147483647f, field.FloatArgument);
+      Assert.AreEqual(2147483647d, field.DoubleValue);
+      Assert.AreEqual("+ 2147483647", field.StringArgument.ToString());
+      Assert.AreEqual(" tail", tail.ToString());
     }
 
     [Test]

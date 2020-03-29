@@ -202,17 +202,11 @@ namespace VPlotter
       var word = line[0];
       if (word >= 'A' && word <= 'Z')
       {
-        if (settings.CaseNormalization == GCodeCaseNormalization.ToLowercase)
-        {
-          word += '\x0020';
-        }
+        if (settings.CaseNormalization == GCodeCaseNormalization.ToLowercase) word += '\x0020';
       }
       else if (word >= 'a' && word <= 'z')
       {
-        if (settings.CaseNormalization == GCodeCaseNormalization.ToUppercase)
-        {
-          word -= '\x0020';
-        }
+        if (settings.CaseNormalization == GCodeCaseNormalization.ToUppercase) word -= '\x0020';
       }
       else if (word == '*') // checksum
       {
@@ -225,49 +219,47 @@ namespace VPlotter
       }
 
       var index = 1;
-      var hasSpace = line.SkipWhitespace(ref index);
+      var space = line.SkipWhitespace(ref index);
 
       if (index == line.Length)
       {
-        tail = ReadOnlySpan<char>.Empty;
-        return new GCodeField(word, line[..index], KindInternal.NoArgument);
+        tail = line.Slice(start: 1);
+        return new GCodeField(word, line.Slice(start: 0, length: 1), KindInternal.NoArgument);
       }
 
       var first = line[index];
       if (first == '-' || first == '+')
       {
         index++;
-        hasSpace += line.SkipWhitespace(ref index); // space after sign
+        space += line.SkipWhitespace(ref index); // space after sign
 
-        if (index == line.Length)
-        {
-          tail = ReadOnlySpan<char>.Empty;
-          return new GCodeField(word, line[..index], KindInternal.ParsingError);
-        }
-
-        // can only number
+        // continue number
       }
       else if (first == '"')
       {
-        var literalKind = ParseStringLiteral(line, ref index, settings, out var stringLength);
+        var literalKind = ParseStringLiteral(line, ref index, settings, out var length);
+        var rawField = line.Slice(start: 0, length: index);
 
-        tail = line.Slice(index);
-        return new GCodeField(word, line.Slice(0, index), literalKind, payload: stringLength);
+        tail = line.Slice(start: index);
+        return new GCodeField(word, rawField, literalKind, payload: length);
       }
 
       var integer = line.TryScanGCodeUnsignedInt32(ref index);
-      if (integer >= 0) // X123
+      if (integer < 0) // "X-" or "X +"
       {
-        if (index == line.Length)
-        {
-          tail = ReadOnlySpan<char>.Empty;
-          return new GCodeField(word, line, KindInternal.ParsingError);
-        }
+        tail = line.Slice(start: 1);
+        return new GCodeField(word, line.Slice(start: 0, length: 1), KindInternal.ParsingError);
       }
-      else // can be X.123
-      {
-//
-      }
+
+      if (first == '-') integer = -integer;
+
+      tail = line.Slice(start: index);
+
+      var argumentKind = space == 0 ? KindInternal.IntegerNoSpace : KindInternal.Integer;
+      return new GCodeField(word, line.Slice(start: 0, length: index), argumentKind, payload: integer);
+
+
+
 
       // todo: Evaluate expression + .NET Core!!!
 
