@@ -1,84 +1,183 @@
 using System;
+using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace VPlotter
 {
   [StructLayout(LayoutKind.Auto)]
   public readonly ref struct GCodeField
   {
+    public readonly char Word;
     public readonly ReadOnlySpan<char> Raw;
-    public readonly Kind ArgumentKind;
+    private readonly KindInternal myArgumentKind;
+    private readonly int myPayload;
 
-    private readonly int myHigh, myLow;
-
-    private GCodeField(ReadOnlySpan<char> field, Kind argumentKind)
+    private GCodeField(char word, ReadOnlySpan<char> rawField, KindInternal argumentKind, int payload = -1)
     {
-      Raw = field;
-      ArgumentKind = argumentKind;
-      myHigh = default;
-      myLow = default;
+      Word = word;
+      Raw = rawField;
+      myArgumentKind = argumentKind;
+      myPayload = payload;
     }
 
     public bool IsValid => Raw.Length > 0;
-    public char Word => Raw.Length > 0 ? Raw[0] : '\0';
 
     public ReadOnlySpan<char> RawArgument => Raw.Slice(start: 1);
 
-    public int IntValue
+    private ReadOnlySpan<char> RawArgumentNoHeadSpace
     {
       get
       {
-        if (ArgumentKind == Kind.Integer)
-        {
-          //return Int32.Parse(RawArgument, );
-        }
-
-        return 0;
+        var index = 1;
+        Raw.SkipWhitespace(ref index);
+        return Raw.Slice(index);
       }
     }
 
-    public int FractionalPartIntValue
+    public bool HasArgument
     {
       get
       {
-        return 0;
-      }
-    }
-
-    public float FloatValue
-    {
-      get
-      {
-        switch (ArgumentKind)
+        switch (myArgumentKind)
         {
-          case Kind.NoArgument:
-            break;
+          case KindInternal.IntegerNoSpace:
+          case KindInternal.RealNoSpace:
+          case KindInternal.Integer:
+          case KindInternal.Real:
+          case KindInternal.StringNoEscapeNoSpace:
+          case KindInternal.StringNoEscapeMaybeUnfinished:
+          case KindInternal.StringEscaped:
+          case KindInternal.StringEscapedWithSingleQuote:
+            return true;
 
-          case Kind.Integer:
-          case Kind.Real:
-            //Single.TryParse(RawArgument);
-            break;
-
-          case Kind.String:
-            break;
           default:
-            throw new ArgumentOutOfRangeException();
+            return false;
         }
+      }
+    }
 
+    public int IntArgument
+    {
+      get
+      {
+        switch (myArgumentKind)
+        {
+          case KindInternal.IntegerNoSpace:
+          case KindInternal.Integer:
+          case KindInternal.RealNoSpace:
+          case KindInternal.Real:
+            return myPayload;
 
+          default:
+            throw new ArgumentOutOfRangeException(message: "Integer argument missing", null);
+        }
+      }
+    }
 
-        return 0;
+    public float FloatArgument
+    {
+      get
+      {
+        switch (myArgumentKind)
+        {
+          case KindInternal.IntegerNoSpace:
+          case KindInternal.Integer:
+            return myPayload;
+
+          case KindInternal.RealNoSpace:
+            return float.Parse(RawArgument, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint);
+
+          case KindInternal.Real:
+            throw new Exception();
+
+          default:
+            throw new ArgumentOutOfRangeException(message: "Float argument missing", null);
+        }
       }
     }
 
     public double DoubleValue
     {
-      get { return 0; }
+      get
+      {
+        switch (myArgumentKind)
+        {
+          case KindInternal.IntegerNoSpace:
+          case KindInternal.Integer:
+            return myPayload;
+
+          case KindInternal.RealNoSpace:
+            return double.Parse(RawArgument, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint);
+
+          case KindInternal.Real:
+            throw new Exception();
+
+          default:
+            throw new ArgumentOutOfRangeException(message: "No argument", null);
+        }
+      }
     }
 
-    public ReadOnlySpan<char> StringValue
+    public ReadOnlySpan<char> StringArgument
     {
-      get { return ReadOnlySpan<char>.Empty; }
+      get
+      {
+        switch (myArgumentKind)
+        {
+          case KindInternal.NoArgument:
+          case KindInternal.IntegerNoSpace:
+          case KindInternal.RealNoSpace:
+          case KindInternal.ParsingError:
+            return RawArgument;
+          case KindInternal.Integer:
+          case KindInternal.Real:
+            return RawArgumentNoHeadSpace;
+          case KindInternal.StringNoEscapeNoSpace:
+            return Raw.Slice(start: 2, length: Raw.Length - 3);
+          case KindInternal.StringNoEscapeMaybeUnfinished:
+            return DecodeNoEscapeString();
+          case KindInternal.StringEscaped:
+            return DecodeStringLiteral(decodeSingleQuotes: false);
+          case KindInternal.StringEscapedWithSingleQuote:
+            return DecodeStringLiteral(decodeSingleQuotes: true);
+          default:
+            throw new ArgumentOutOfRangeException();
+        }
+      }
+    }
+
+    private ReadOnlySpan<char> DecodeNoEscapeString()
+    {
+      var argument = RawArgumentNoHeadSpace;
+      return argument[^1] == '"' ? argument[1..^1] : argument[1..];
+    }
+
+    private ReadOnlySpan<char> DecodeStringLiteral(bool decodeSingleQuotes)
+    {
+      var argument = RawArgumentNoHeadSpace;
+      var builder = new StringBuilder(capacity: myPayload);
+
+      for (var index = 1; index < argument.Length; index++)
+      {
+        var ch = argument[index];
+        if (ch == '"')
+        {
+          if (index + 1 >= argument.Length) break;
+          index++;
+        }
+        else if (ch == '\'' && decodeSingleQuotes)
+        {
+          if (index + 1 >= argument.Length) break;
+
+          index++;
+          ch = char.ToLower(argument[index]);
+        }
+
+        builder.Append(ch);
+      }
+
+      return builder.ToString().AsSpan();
     }
 
     public enum Kind : byte
@@ -105,54 +204,64 @@ namespace VPlotter
       {
         if (settings.CaseNormalization == GCodeCaseNormalization.ToLowercase)
         {
-          word += '\x0032';
+          word += '\x0020';
         }
       }
       else if (word >= 'a' && word <= 'z')
       {
         if (settings.CaseNormalization == GCodeCaseNormalization.ToUppercase)
         {
-          word -= '\x0032';
+          word -= '\x0020';
         }
+      }
+      else if (word == '*') // checksum
+      {
+        // todo: test
       }
       else
       {
-        // todo: allow some other symbols?
         tail = line;
         return default;
       }
 
       var index = 1;
-      line.SkipWhitespace(ref index);
+      var hasSpace = line.SkipWhitespace(ref index);
 
       if (index == line.Length)
       {
         tail = ReadOnlySpan<char>.Empty;
-        return new GCodeField(line, Kind.NoArgument);
+        return new GCodeField(word, line[..index], KindInternal.NoArgument);
       }
 
       var first = line[index];
       if (first == '-' || first == '+')
       {
         index++;
-        line.SkipWhitespace(ref index);
+        hasSpace += line.SkipWhitespace(ref index); // space after sign
 
         if (index == line.Length)
         {
           tail = ReadOnlySpan<char>.Empty;
-          return new GCodeField(line, Kind.ParsingError);
+          return new GCodeField(word, line[..index], KindInternal.ParsingError);
         }
+
+        // can only number
+      }
+      else if (first == '"')
+      {
+        var literalKind = ParseStringLiteral(line, ref index, settings, out var stringLength);
+
+        tail = line.Slice(index);
+        return new GCodeField(word, line.Slice(0, index), literalKind, payload: stringLength);
       }
 
-      var integer = ScanInteger(ref index, line);
+      var integer = line.TryScanGCodeUnsignedInt32(ref index);
       if (integer >= 0) // X123
       {
-
-
         if (index == line.Length)
         {
           tail = ReadOnlySpan<char>.Empty;
-          return new GCodeField(line, Kind.ParsingError);
+          return new GCodeField(word, line, KindInternal.ParsingError);
         }
       }
       else // can be X.123
@@ -160,31 +269,8 @@ namespace VPlotter
 //
       }
 
-// Evaluate expression + .NET Core!!!
+      // todo: Evaluate expression + .NET Core!!!
 
-
-
-      // todo: skip leading 0
-      static int ScanInteger(ref int index, ReadOnlySpan<char> span)
-      {
-        var value = -1;
-
-        for (; index < span.Length; index++)
-        {
-          var c = span[index];
-          if (c >= '0' && c <= '9') break;
-
-          var digit = c - '0';
-
-          if (value == -1)
-          {
-            //2147483647;
-          }
-
-        }
-
-        return value;
-      }
 
 
       // skip ws
@@ -202,7 +288,48 @@ namespace VPlotter
       return default; // new GCodeField(line.Slice(0, 1));
     }
 
+    private static KindInternal ParseStringLiteral(ReadOnlySpan<char> line, ref int index, GCodeParsingSettings settings, out int stringLength)
+    {
+      var startIndex = index;
+      var singleQuoteEscape = settings.EnableSingleQuoteEscapingInStringLiterals;
+      stringLength = line.TryScanGCodeDoubleQuotedStringLiteral(ref index, singleQuoteEscape);
 
+      if (stringLength < 0)
+      {
+        return KindInternal.ParsingError; // must be unreachable
+      }
+
+      var borders = (line[index - 1] == '"') ? 2 : 1;
+
+      if (index - startIndex == stringLength + borders) // no escaping
+      {
+        if (startIndex == 1 && line[index - 1] == '"')
+          return KindInternal.StringNoEscapeNoSpace;
+
+        return KindInternal.StringNoEscapeMaybeUnfinished;
+      }
+
+      return singleQuoteEscape ? KindInternal.StringEscapedWithSingleQuote : KindInternal.StringEscaped;
+    }
+
+    private enum KindInternal
+    {
+      //                 sample    arg1
+      NoArgument,     // X         -1
+      IntegerNoSpace, // X123      123
+      RealNoSpace,    // X123.45   123
+                      // X123.     123
+      Integer,        // X 123     123
+      Real,           // X - 1 .
+                      // X.123     0
+      ParsingError,   // X-        -1
+
+      StringNoEscapeNoSpace,         // X"abc"
+      StringNoEscapeMaybeUnfinished, // X "abc"
+                                     // X"abc
+      StringEscaped,                 // X"ab""c"
+      StringEscapedWithSingleQuote,  // X"'A'B"
+    }
 
   }
 

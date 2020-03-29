@@ -1,5 +1,4 @@
 using System;
-using System.ComponentModel.Design;
 using System.Diagnostics.CodeAnalysis;
 
 namespace VPlotter
@@ -26,16 +25,22 @@ namespace VPlotter
       return length > 0 && span[length - 1].Equals(value);
     }
 
-    public static void SkipWhitespace(this ReadOnlySpan<char> span, ref int index)
+    public static int SkipWhitespace(this ReadOnlySpan<char> span, ref int index)
     {
+      var skipped = 0;
+
       for (; index < span.Length; index++)
       {
         var ch = span[index];
         if (ch != ' ' && ch != '\t') break;
+
+        skipped++;
       }
+
+      return skipped;
     }
 
-    public static int TryScanUnsignedInt32(this ReadOnlySpan<char> span, ref int index)
+    public static int TryScanGCodeUnsignedInt32(this ReadOnlySpan<char> span, ref int index)
     {
       var start = index;
       var value = 0;
@@ -66,7 +71,7 @@ namespace VPlotter
       return start != index ? value : -1;
     }
 
-    public static int TryScanDecimalFractionUnsignedInt32(this ReadOnlySpan<char> span, ref int index)
+    public static int TryScanGCodeDecimalFractionUnsignedInt32(this ReadOnlySpan<char> span, ref int index)
     {
       var start = index;
       var value = 1;
@@ -77,15 +82,18 @@ namespace VPlotter
         var ch = span[index];
         if (ch < '0' || ch > '9') break;
 
-        /*if (valueNoTrailingZeroes >= 1000000000)
-        {
-          index = start;
-          return -1; // mul overflow
-        }*/
-
         var digit = ch - '0';
 
-        if (value < 0 || value >= 1000000000)
+        if (value >= 0 && value < 1000000000)
+        {
+          value = value * 10 + digit;
+
+          if (digit != 0)
+          {
+            valueNoTrailingZeroes = value;
+          }
+        }
+        else
         {
           value = -1;
 
@@ -95,18 +103,45 @@ namespace VPlotter
             return -1;
           }
         }
-        else
-        {
-          value = value * 10 + digit;
+      }
 
-          if (digit != 0)
+      return start == index ? -1 : valueNoTrailingZeroes;
+    }
+
+    public static int TryScanGCodeDoubleQuotedStringLiteral(this ReadOnlySpan<char> span, ref int index, bool singleQuoteEscape)
+    {
+      if (span.Length == index) return -1;
+      if (span[index] != '"') return -1;
+
+      index++;
+
+      var length = 0;
+      for (; index < span.Length; length++)
+      {
+        var ch = span[index++];
+        if (ch == '\'' && singleQuoteEscape)
+        {
+          if (index == span.Length)
           {
-            valueNoTrailingZeroes = value;
+            return index; // unfinished, "aaa'
+          }
+
+          index++; // just skip the next character
+        }
+        else if (ch == '"')
+        {
+          if (index < span.Length && span[index] == '"')
+          {
+            index++; // skip ""
+          }
+          else
+          {
+            return length;
           }
         }
       }
 
-      return start == index ? -1 : valueNoTrailingZeroes;
+      return length;
     }
   }
 }
