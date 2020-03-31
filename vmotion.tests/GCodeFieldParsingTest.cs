@@ -32,6 +32,42 @@ namespace VMotion.Tests
     }
 
     [Test]
+    public void Invalid03()
+    {
+      var field = GCodeField.TryParse("X.tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsFalse(field.HasArgument);
+      Assert.AreEqual('X', field.Word);
+      Assert.AreEqual("", field.RawArgument.ToString());
+      Assert.AreEqual(".tail", tail.ToString());
+    }
+
+    [Test]
+    public void Invalid04()
+    {
+      var field = GCodeField.TryParse("X-.tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsFalse(field.HasArgument);
+      Assert.AreEqual('X', field.Word);
+      Assert.AreEqual("", field.RawArgument.ToString());
+      Assert.AreEqual("-.tail", tail.ToString());
+    }
+
+    [Test]
+    public void Invalid05()
+    {
+      var field = GCodeField.TryParse("X-tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsFalse(field.HasArgument);
+      Assert.AreEqual('X', field.Word);
+      Assert.AreEqual("", field.RawArgument.ToString());
+      Assert.AreEqual("-tail", tail.ToString());
+    }
+
+    [Test]
     public void Trivial()
     {
       var trivial = GCodeField.TryParse(
@@ -58,6 +94,11 @@ namespace VMotion.Tests
         "X".AsSpan(), out _, new GCodeParsingSettings(caseNormalization: GCodeCaseNormalization.ToLowercase));
 
       Assert.AreEqual(toLower.Word, 'x');
+
+      var doNotTouch = GCodeField.TryParse(
+        "x".AsSpan(), out _, new GCodeParsingSettings(caseNormalization: GCodeCaseNormalization.DoNotTouch));
+
+      Assert.AreEqual(doNotTouch.Word, 'x');
     }
 
     [Test]
@@ -71,7 +112,8 @@ namespace VMotion.Tests
       Assert.AreEqual("123", field.RawArgument.ToString());
       Assert.AreEqual(123, field.IntArgument);
       Assert.AreEqual(123.0f, field.FloatArgument);
-      Assert.AreEqual(123.0d, field.DoubleValue);
+      Assert.AreEqual(123.0d, field.DoubleArgument);
+      Assert.AreEqual(123.0m, field.DecimalArgument);
       Assert.AreEqual("123", field.StringArgument.ToString());
       Assert.AreEqual("y1", tail.ToString());
 
@@ -90,7 +132,8 @@ namespace VMotion.Tests
       Assert.AreEqual("-42", field.RawArgument.ToString());
       Assert.AreEqual(-42, field.IntArgument);
       Assert.AreEqual(-42f, field.FloatArgument);
-      Assert.AreEqual(-42d, field.DoubleValue);
+      Assert.AreEqual(-42d, field.DoubleArgument);
+      Assert.AreEqual(-42m, field.DecimalArgument);
       Assert.AreEqual("-42", field.StringArgument.ToString());
       Assert.AreEqual("tail", tail.ToString());
     }
@@ -107,10 +150,211 @@ namespace VMotion.Tests
       Assert.AreEqual(" + 2147483647", field.RawArgument.ToString());
       Assert.AreEqual(2147483647, field.IntArgument);
       Assert.AreEqual(2147483647f, field.FloatArgument);
-      Assert.AreEqual(2147483647d, field.DoubleValue);
+      Assert.AreEqual(2147483647d, field.DoubleArgument);
+      Assert.AreEqual(2147483647m, field.DecimalArgument);
       Assert.AreEqual("+ 2147483647", field.StringArgument.ToString());
       Assert.AreEqual(" tail", tail.ToString());
     }
+
+    [Test]
+    public void IntArgument04()
+    {
+      var field = GCodeField.TryParse("Y    -\t2147483647 tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsTrue(field.HasArgument);
+      Assert.AreEqual('Y', field.Word);
+      Assert.AreEqual("Y    -\t2147483647", field.Raw.ToString());
+      Assert.AreEqual("    -\t2147483647", field.RawArgument.ToString());
+      Assert.AreEqual(-2147483647, field.IntArgument);
+      Assert.AreEqual(-2147483647f, field.FloatArgument);
+      Assert.AreEqual(-2147483647d, field.DoubleArgument);
+      Assert.AreEqual(-2147483647m, field.DecimalArgument);
+      Assert.AreEqual("-\t2147483647", field.StringArgument.ToString());
+      Assert.AreEqual(" tail", tail.ToString());
+    }
+
+    [Test]
+    public void RealArgument01()
+    {
+      var field = GCodeField.TryParse("Z1.2tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsTrue(field.HasArgument);
+      Assert.AreEqual('Z', field.Word);
+      Assert.AreEqual("Z1.2", field.Raw.ToString());
+      Assert.AreEqual("1.2", field.RawArgument.ToString());
+      Assert.AreEqual(1, field.IntArgument);
+      Assert.AreEqual(1.2f, field.FloatArgument);
+      Assert.AreEqual(1.2d, field.DoubleArgument);
+      Assert.AreEqual(1.2m, field.DecimalArgument);
+      Assert.AreEqual("1.2", field.StringArgument.ToString());
+      Assert.AreEqual("tail", tail.ToString());
+    }
+
+    [Test]
+    public void RealArgument02()
+    {
+      var field = GCodeField.TryParse("Z42.tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsTrue(field.HasArgument);
+      Assert.AreEqual('Z', field.Word);
+      Assert.AreEqual("Z42.", field.Raw.ToString());
+      Assert.AreEqual("42.", field.RawArgument.ToString());
+      Assert.AreEqual(42, field.IntArgument);
+      Assert.AreEqual(42.0f, field.FloatArgument);
+      Assert.AreEqual(42.0d, field.DoubleArgument);
+      Assert.AreEqual(42.0m, field.DecimalArgument);
+      Assert.AreEqual("42.", field.StringArgument.ToString());
+      Assert.AreEqual("tail", tail.ToString());
+    }
+
+    [Test]
+    public void RealArgument03()
+    {
+      var field = GCodeField.TryParse("Z.42tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsTrue(field.HasArgument);
+      Assert.AreEqual('Z', field.Word);
+      Assert.AreEqual("Z.42", field.Raw.ToString());
+      Assert.AreEqual(".42", field.RawArgument.ToString());
+      Assert.AreEqual(0, field.IntArgument);
+      Assert.AreEqual(.42f, field.FloatArgument);
+      Assert.AreEqual(.42d, field.DoubleArgument);
+      Assert.AreEqual(.42m, field.DecimalArgument);
+      Assert.AreEqual(".42", field.StringArgument.ToString());
+      Assert.AreEqual("tail", tail.ToString());
+    }
+
+    [Test]
+    public void RealArgument04()
+    {
+      var field = GCodeField.TryParse("Z-42.tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsTrue(field.HasArgument);
+      Assert.AreEqual('Z', field.Word);
+      Assert.AreEqual("Z-42.", field.Raw.ToString());
+      Assert.AreEqual("-42.", field.RawArgument.ToString());
+      Assert.AreEqual(-42, field.IntArgument);
+      Assert.AreEqual(-42.0f, field.FloatArgument);
+      Assert.AreEqual(-42.0d, field.DoubleArgument);
+      Assert.AreEqual(-42.0m, field.DecimalArgument);
+      Assert.AreEqual("-42.", field.StringArgument.ToString());
+      Assert.AreEqual("tail", tail.ToString());
+    }
+
+    [Test]
+    public void RealArgument05()
+    {
+      var field = GCodeField.TryParse("Z-.42tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsTrue(field.HasArgument);
+      Assert.AreEqual('Z', field.Word);
+      Assert.AreEqual("Z-.42", field.Raw.ToString());
+      Assert.AreEqual("-.42", field.RawArgument.ToString());
+      Assert.AreEqual(0, field.IntArgument);
+      Assert.AreEqual(-.42f, field.FloatArgument);
+      Assert.AreEqual(-.42d, field.DoubleArgument);
+      Assert.AreEqual(-.42m, field.DecimalArgument);
+      Assert.AreEqual("-.42", field.StringArgument.ToString());
+      Assert.AreEqual("tail", tail.ToString());
+    }
+
+    [Test]
+    public void RealArgument06()
+    {
+      var field = GCodeField.TryParse("Z-123.42tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsTrue(field.HasArgument);
+      Assert.AreEqual('Z', field.Word);
+      Assert.AreEqual("Z-123.42", field.Raw.ToString());
+      Assert.AreEqual("-123.42", field.RawArgument.ToString());
+      Assert.AreEqual(-123, field.IntArgument);
+      Assert.AreEqual(-123.42f, field.FloatArgument);
+      Assert.AreEqual(-123.42d, field.DoubleArgument);
+      Assert.AreEqual(-123.42m, field.DecimalArgument);
+      Assert.AreEqual("-123.42", field.StringArgument.ToString());
+      Assert.AreEqual("tail", tail.ToString());
+    }
+
+    [Test]
+    public void RealArgument07()
+    {
+      var field = GCodeField.TryParse("Z - 12 . 3tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsTrue(field.HasArgument);
+      Assert.AreEqual('Z', field.Word);
+      Assert.AreEqual("Z - 12 . 3", field.Raw.ToString());
+      Assert.AreEqual(" - 12 . 3", field.RawArgument.ToString());
+      Assert.AreEqual(-12, field.IntArgument);
+      Assert.AreEqual(-12.3f, field.FloatArgument);
+      Assert.AreEqual(-12.3d, field.DoubleArgument);
+      Assert.AreEqual(-12.3m, field.DecimalArgument);
+      Assert.AreEqual("- 12 . 3", field.StringArgument.ToString());
+      Assert.AreEqual("tail", tail.ToString());
+    }
+
+    [Test]
+    public void RealArgument08()
+    {
+      var field = GCodeField.TryParse("Z - 12 .tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsTrue(field.HasArgument);
+      Assert.AreEqual('Z', field.Word);
+      Assert.AreEqual("Z - 12 .", field.Raw.ToString());
+      Assert.AreEqual(" - 12 .", field.RawArgument.ToString());
+      Assert.AreEqual(-12, field.IntArgument);
+      Assert.AreEqual(-12f, field.FloatArgument);
+      Assert.AreEqual(-12d, field.DoubleArgument);
+      Assert.AreEqual(-12m, field.DecimalArgument);
+      Assert.AreEqual("- 12 .", field.StringArgument.ToString());
+      Assert.AreEqual("tail", tail.ToString());
+    }
+
+    [Test]
+    public void RealArgument09()
+    {
+      var field = GCodeField.TryParse("Z - . 34tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsTrue(field.HasArgument);
+      Assert.AreEqual('Z', field.Word);
+      Assert.AreEqual("Z - . 34", field.Raw.ToString());
+      Assert.AreEqual(" - . 34", field.RawArgument.ToString());
+      Assert.AreEqual(0, field.IntArgument);
+      Assert.AreEqual(-0.34f, field.FloatArgument);
+      Assert.AreEqual(-0.34d, field.DoubleArgument);
+      Assert.AreEqual(-0.34m, field.DecimalArgument);
+      Assert.AreEqual("- . 34", field.StringArgument.ToString());
+      Assert.AreEqual("tail", tail.ToString());
+    }
+
+    [Test]
+    public void RealArgument10()
+    {
+      var field = GCodeField.TryParse("Z . 34tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsTrue(field.HasArgument);
+      Assert.AreEqual('Z', field.Word);
+      Assert.AreEqual("Z . 34", field.Raw.ToString());
+      Assert.AreEqual(" . 34", field.RawArgument.ToString());
+      Assert.AreEqual(0, field.IntArgument);
+      Assert.AreEqual(.34f, field.FloatArgument);
+      Assert.AreEqual(.34d, field.DoubleArgument);
+      Assert.AreEqual(.34m, field.DecimalArgument);
+      Assert.AreEqual(". 34", field.StringArgument.ToString());
+      Assert.AreEqual("tail", tail.ToString());
+    }
+
+    // todo: multiplication
 
     [Test]
     public void StringArgument01()

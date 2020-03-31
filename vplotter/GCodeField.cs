@@ -13,6 +13,8 @@ namespace VPlotter
     private readonly KindInternal myArgumentKind;
     private readonly int myPayload;
 
+    private const NumberStyles RealNumber = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
+
     private GCodeField(char word, ReadOnlySpan<char> rawField, KindInternal argumentKind, int payload = -1)
     {
       Word = word;
@@ -23,6 +25,7 @@ namespace VPlotter
 
     public bool IsValid => Raw.Length > 0;
 
+    // todo: do we really need it? S123 Some message
     public ReadOnlySpan<char> RawArgument => Raw.Slice(start: 1);
 
     private ReadOnlySpan<char> RawArgumentNoHeadSpace
@@ -41,7 +44,7 @@ namespace VPlotter
       {
         switch (myArgumentKind)
         {
-          case KindInternal.IntegerNoSpace:
+          case KindInternal.IntegerNoSpaceNoScaling:
           case KindInternal.RealNoSpace:
           case KindInternal.Integer:
           case KindInternal.Real:
@@ -63,12 +66,11 @@ namespace VPlotter
       {
         switch (myArgumentKind)
         {
-          case KindInternal.IntegerNoSpace:
+          case KindInternal.IntegerNoSpaceNoScaling:
           case KindInternal.Integer:
           case KindInternal.RealNoSpace:
           case KindInternal.Real:
             return myPayload;
-
           default:
             throw new ArgumentOutOfRangeException(message: "Integer argument missing", null);
         }
@@ -81,41 +83,129 @@ namespace VPlotter
       {
         switch (myArgumentKind)
         {
-          case KindInternal.IntegerNoSpace:
+          case KindInternal.IntegerNoSpaceNoScaling:
           case KindInternal.Integer:
             return myPayload;
-
           case KindInternal.RealNoSpace:
-            return float.Parse(RawArgument, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint);
-
+            return float.Parse(RawArgument, style: RealNumber);
           case KindInternal.Real:
-            throw new Exception();
-
+            return (float) ParseDecimalIgnoreSpacing();
           default:
             throw new ArgumentOutOfRangeException(message: "Float argument missing", null);
         }
       }
     }
 
-    public double DoubleValue
+    public double DoubleArgument
     {
       get
       {
         switch (myArgumentKind)
         {
-          case KindInternal.IntegerNoSpace:
+          case KindInternal.IntegerNoSpaceNoScaling:
           case KindInternal.Integer:
             return myPayload;
-
           case KindInternal.RealNoSpace:
-            return double.Parse(RawArgument, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint);
-
+            return double.Parse(RawArgument, style: RealNumber);
           case KindInternal.Real:
-            throw new Exception();
-
+            return (double) ParseDecimalIgnoreSpacing();
           default:
             throw new ArgumentOutOfRangeException(message: "No argument", null);
         }
+      }
+    }
+
+    public decimal DecimalArgument
+    {
+      get
+      {
+        switch (myArgumentKind)
+        {
+          case KindInternal.IntegerNoSpaceNoScaling:
+          case KindInternal.Integer:
+            return myPayload;
+          case KindInternal.RealNoSpace:
+            return decimal.Parse(RawArgument, style: RealNumber);
+          case KindInternal.Real:
+            return ParseDecimalIgnoreSpacing();
+          default:
+            throw new ArgumentOutOfRangeException(message: "No argument", null);
+        }
+      }
+    }
+
+    private decimal ParseDecimalIgnoreSpacing()
+    {
+      var index = 1;
+      Raw.SkipWhitespace(ref index);
+
+      var first = Raw[index];
+      if (first == '-' || first == '+')
+      {
+        index++;
+        Raw.SkipWhitespace(ref index);
+      }
+
+      var integer = Raw.TryScanGCodeUnsignedInt32(ref index);
+      if (integer < 0)
+      {
+        integer = 0;
+      }
+      else if (first == '-')
+      {
+        integer = -integer;
+      }
+
+      // skip dot
+      Raw.SkipWhitespace(ref index);
+      index++;
+      Raw.SkipWhitespace(ref index);
+
+      var fraction = Raw.TryScanGCodeDecimalFractionUnsignedInt32(ref index);
+      if (fraction < 0)
+      {
+        return integer;
+      }
+
+      var log10 = (byte) Math.Log10(fraction);
+
+      var fractionDec = new decimal(
+        lo: fraction, mid: 0, hi: 0, isNegative: false, scale: log10) - 1;
+
+      return first == '-' ? integer - fractionDec : integer + fractionDec;
+    }
+
+    public int IntArgumentScaled
+    {
+      get
+      {
+        switch (myArgumentKind)
+        {
+          case KindInternal.NoArgument:
+            break;
+          case KindInternal.IntegerNoSpaceNoScaling:
+            break;
+          case KindInternal.RealNoSpace:
+            break;
+          case KindInternal.Integer:
+            break;
+          case KindInternal.Real:
+            break;
+          case KindInternal.ParsingError:
+            break;
+          case KindInternal.StringNoEscapeNoSpace:
+            break;
+          case KindInternal.StringNoEscapeMaybeUnfinished:
+            break;
+          case KindInternal.StringEscaped:
+            break;
+          case KindInternal.StringEscapedWithSingleQuote:
+            break;
+          default:
+            throw new ArgumentOutOfRangeException();
+        }
+
+        return 0;
       }
     }
 
@@ -126,7 +216,7 @@ namespace VPlotter
         switch (myArgumentKind)
         {
           case KindInternal.NoArgument:
-          case KindInternal.IntegerNoSpace:
+          case KindInternal.IntegerNoSpaceNoScaling:
           case KindInternal.RealNoSpace:
           case KindInternal.ParsingError:
             return RawArgument;
@@ -178,15 +268,6 @@ namespace VPlotter
       }
 
       return builder.ToString().AsSpan();
-    }
-
-    public enum Kind : byte
-    {
-      NoArgument, // X
-      Integer, // X123
-      Real, // X123.45
-      String, // X"aaa"
-      ParsingError // X-
     }
 
     public override string ToString() => Raw.ToString();
@@ -244,41 +325,63 @@ namespace VPlotter
         return new GCodeField(word, rawField, literalKind, payload: length);
       }
 
-      var integer = line.TryScanGCodeUnsignedInt32(ref index);
-      if (integer < 0) // "X-" or "X +"
+      var integerValue = line.TryScanGCodeUnsignedInt32(ref index);
+      if (integerValue < 0) // "X" or "X-" or "X +"
       {
-        tail = line.Slice(start: 1);
-        return new GCodeField(word, line.Slice(start: 0, length: 1), KindInternal.ParsingError);
+        if (index < line.Length && line[index] == '.')
+        {
+          integerValue = 0;
+          first = '.'; // re-use variable as a flag
+        }
+        else
+        {
+          tail = line.Slice(start: 1);
+          return new GCodeField(word, line.Slice(start: 0, length: 1), KindInternal.ParsingError);
+        }
+      }
+      else
+      {
+        if (first == '-') integerValue = -integerValue;
       }
 
-      if (first == '-') integer = -integer;
+      var indexAfterDigit = index;
+      space += line.SkipWhitespace(ref indexAfterDigit);
+      if (indexAfterDigit < line.Length && line[indexAfterDigit] == '.') // found 123.
+      {
+        var indexAfterDot = indexAfterDigit + 1;
+        space += line.SkipWhitespace(ref indexAfterDot);
+        var argumentKind = space == 0 ? KindInternal.RealNoSpace : KindInternal.Real;
 
-      tail = line.Slice(start: index);
+        var fractional = line.TryScanGCodeDecimalFractionUnsignedInt32(ref indexAfterDot);
+        if (fractional < 0) // X. or X-. or X123. or X-123.
+        {
+          if (first == '.') // X.
+          {
+            tail = line.Slice(start: 1);
+            return new GCodeField(word, line.Slice(start: 0, length: 1), KindInternal.ParsingError);
+          }
+          else
+          {
+            tail = line.Slice(start: indexAfterDigit + 1);
+            return new GCodeField(word, line.Slice(start: 0, length: indexAfterDigit + 1), argumentKind, payload: integerValue);
+          }
+        }
+        else // 123.456
+        {
+          tail = line.Slice(start: indexAfterDot);
+          return new GCodeField(word, line.Slice(start: 0, length: indexAfterDot), argumentKind, payload: integerValue);
+        }
+      }
 
-      var argumentKind = space == 0 ? KindInternal.IntegerNoSpace : KindInternal.Integer;
-      return new GCodeField(word, line.Slice(start: 0, length: index), argumentKind, payload: integer);
+      {
+        tail = line.Slice(start: index);
 
-
-
-
-      // todo: Evaluate expression + .NET Core!!!
-
-
-
-      // skip ws
-
-      // can be + - 0-9
-      // can be .
-      // can be "
-
-      // 123
-      // 456
-      // 789
-
-
-      tail = line;
-      return default; // new GCodeField(line.Slice(0, 1));
+        var argumentKind = space == 0 ? KindInternal.IntegerNoSpaceNoScaling : KindInternal.Integer;
+        return new GCodeField(word, line.Slice(start: 0, length: index), argumentKind, payload: integerValue);
+      }
     }
+
+    // todo: evaluate expression + .NET Core
 
     private static KindInternal ParseStringLiteral(ReadOnlySpan<char> line, ref int index, GCodeParsingSettings settings, out int stringLength)
     {
@@ -304,14 +407,20 @@ namespace VPlotter
       return singleQuoteEscape ? KindInternal.StringEscapedWithSingleQuote : KindInternal.StringEscaped;
     }
 
-    private enum KindInternal
+    private enum KindInternal : short
     {
-      //                 sample    arg1
-      NoArgument,     // X         -1
-      IntegerNoSpace, // X123      123
-      RealNoSpace,    // X123.45   123
-                      // X123.     123
-      Integer,        // X 123     123
+      //                          sample    payload
+      NoArgument,              // X         -1
+
+      IntegerNoSpaceNoScaling, // X123      123
+      IntegerNoSpace,          // X123      123000
+      IntegerNoScaling,        // X 123     123
+      Integer,                 // X 123     123000
+
+      RealNoSpace,    // X123.45   123 / 123450
+                      // X123.     123 / 123000
+
+
       Real,           // X - 1 .
                       // X.123     0
       ParsingError,   // X-        -1
@@ -321,9 +430,8 @@ namespace VPlotter
                                      // X"abc
       StringEscaped,                 // X"ab""c"
       StringEscapedWithSingleQuote,  // X"'A'B"
+
+      //A = 10
     }
-
   }
-
-
 }

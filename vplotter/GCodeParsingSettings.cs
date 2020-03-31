@@ -6,10 +6,12 @@ namespace VPlotter
 
     public GCodeParsingSettings(
       GCodeCaseNormalization caseNormalization = GCodeCaseNormalization.ToUppercase,
-      bool enableSingleQuoteEscapingInStringLiterals = false)
+      bool enableSingleQuoteEscapingInStringLiterals = false,
+      int integerArgumentsScaleFactor = 0)
     {
       CaseNormalization = caseNormalization;
       EnableSingleQuoteEscapingInStringLiterals = enableSingleQuoteEscapingInStringLiterals;
+      IntegerArgumentsScaleFactor = integerArgumentsScaleFactor;
     }
 
     public GCodeCaseNormalization CaseNormalization { get; }
@@ -19,6 +21,14 @@ namespace VPlotter
     /// When 'true', for S"A'L'E'X'''S PRINTER" the string argument content is "Alex's PRINTER"
     /// </summary>
     public bool EnableSingleQuoteEscapingInStringLiterals { get; }
+
+    /// <summary>
+    /// Multiply all the numbers in GCode by the 10 to the specified power.
+    /// For X123.45 and the scale factor is 4, the .IntArgumentScaled is equal to 1234560.
+    /// For X12.3456 and the scale factor is 2, the .IntArgumentScaled is equal to 1234.
+    /// Allowed values: 0 - 5.
+    /// </summary>
+    public int IntegerArgumentsScaleFactor { get; }
   }
 
   public enum GCodeCaseNormalization

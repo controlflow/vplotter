@@ -1,3 +1,5 @@
+using System;
+
 namespace VPlotter
 {
   public readonly ref struct GCodeCommand
@@ -11,10 +13,13 @@ namespace VPlotter
     public int Code => (ushort) GCode;
     public int Subcode => (byte) ((uint) GCode >> 16);
 
-    public GCodeField GetField(char c)
+    public GCodeField TryGetField(char word)
     {
+      // parse forward
       return default;
     }
+
+    // todo: command.Read('X', 'Y', 'Z', ref tuple)?
 
 
     public FieldsEnumerable Fields => default;
@@ -25,8 +30,15 @@ namespace VPlotter
     {
       public ref struct FieldsEnumerator
       {
+        private ReadOnlySpan<char> myTail;
+
         public bool MoveNext()
         {
+
+
+          // skip ws
+          // skip comments
+
           return false;
         }
 
