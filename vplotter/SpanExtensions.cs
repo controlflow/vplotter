@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Contracts;
 
 namespace VPlotter
 {
@@ -23,6 +24,13 @@ namespace VPlotter
     {
       var length = span.Length;
       return length > 0 && span[length - 1].Equals(value);
+    }
+
+    [Pure]
+    public static ReadOnlySpan<T> SplitAt<T>(this ReadOnlySpan<T> span, int index, out ReadOnlySpan<T> tail)
+    {
+      tail = span.Slice(start: index);
+      return span.Slice(start: 0, length: index);
     }
 
     public static int SkipWhitespace(this ReadOnlySpan<char> span, ref int index)
@@ -50,19 +58,13 @@ namespace VPlotter
         var ch = span[index];
         if (ch < '0' || ch > '9') break;
 
-        if (value >= 1000000000)
-        {
-          index = start;
-          return -1; // mul overflow
-        }
-
         var digit = ch - '0';
-
         var newValue = value * 10 + digit;
-        if (newValue < 0)
+
+        if (value > 214748364 | newValue < 0)
         {
           index = start;
-          return -1; // add overflow
+          return -2; // overflow
         }
 
         value = newValue;

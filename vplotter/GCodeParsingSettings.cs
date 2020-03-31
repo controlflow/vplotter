@@ -1,3 +1,5 @@
+using System;
+
 namespace VPlotter
 {
   public sealed class GCodeParsingSettings
@@ -6,21 +8,20 @@ namespace VPlotter
 
     public GCodeParsingSettings(
       GCodeCaseNormalization caseNormalization = GCodeCaseNormalization.ToUppercase,
-      bool enableSingleQuoteEscapingInStringLiterals = false,
-      int integerArgumentsScaleFactor = 0)
+      int integerArgumentsScale = 0,
+      bool enableSingleQuoteEscapingInStringLiterals = false)
     {
+      if (integerArgumentsScale < 0 || integerArgumentsScale > 5)
+        throw new ArgumentOutOfRangeException(nameof(integerArgumentsScale));
+
       CaseNormalization = caseNormalization;
       EnableSingleQuoteEscapingInStringLiterals = enableSingleQuoteEscapingInStringLiterals;
-      IntegerArgumentsScaleFactor = integerArgumentsScaleFactor;
+      IntegerArgumentsScale = integerArgumentsScale;
+
+      IntegerArgumentScaleFactor = (int) Math.Pow(10, integerArgumentsScale);
     }
 
     public GCodeCaseNormalization CaseNormalization { get; }
-
-    /// <summary>
-    /// When 'false', for S"Alex's printer" the string argument content is "Alex's printer"
-    /// When 'true', for S"A'L'E'X'''S PRINTER" the string argument content is "Alex's PRINTER"
-    /// </summary>
-    public bool EnableSingleQuoteEscapingInStringLiterals { get; }
 
     /// <summary>
     /// Multiply all the numbers in GCode by the 10 to the specified power.
@@ -28,7 +29,15 @@ namespace VPlotter
     /// For X12.3456 and the scale factor is 2, the .IntArgumentScaled is equal to 1234.
     /// Allowed values: 0 - 5.
     /// </summary>
-    public int IntegerArgumentsScaleFactor { get; }
+    public int IntegerArgumentsScale { get; }
+
+    internal int IntegerArgumentScaleFactor { get; }
+
+    /// <summary>
+    /// When 'false', for S"Alex's printer" the string argument content is "Alex's printer"
+    /// When 'true', for S"A'L'E'X'''S PRINTER" the string argument content is "Alex's PRINTER"
+    /// </summary>
+    public bool EnableSingleQuoteEscapingInStringLiterals { get; }
   }
 
   public enum GCodeCaseNormalization

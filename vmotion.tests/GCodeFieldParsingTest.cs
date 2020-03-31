@@ -22,25 +22,11 @@ namespace VMotion.Tests
     [Test]
     public void Invalid02()
     {
-      var field = GCodeField.TryParse("X  -Y".AsSpan(), out var tail, GCodeParsingSettings.Default);
-
-      Assert.IsTrue(field.IsValid);
-      Assert.IsFalse(field.HasArgument);
-      Assert.AreEqual('X', field.Word);
-      Assert.AreEqual("", field.RawArgument.ToString());
-      Assert.AreEqual("  -Y", tail.ToString());
-    }
-
-    [Test]
-    public void Invalid03()
-    {
       var field = GCodeField.TryParse("X.tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
 
-      Assert.IsTrue(field.IsValid);
+      Assert.IsFalse(field.IsValid);
       Assert.IsFalse(field.HasArgument);
-      Assert.AreEqual('X', field.Word);
-      Assert.AreEqual("", field.RawArgument.ToString());
-      Assert.AreEqual(".tail", tail.ToString());
+      Assert.AreEqual("X.tail", tail.ToString());
     }
 
     [Test]
@@ -48,11 +34,9 @@ namespace VMotion.Tests
     {
       var field = GCodeField.TryParse("X-.tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
 
-      Assert.IsTrue(field.IsValid);
+      Assert.IsFalse(field.IsValid);
       Assert.IsFalse(field.HasArgument);
-      Assert.AreEqual('X', field.Word);
-      Assert.AreEqual("", field.RawArgument.ToString());
-      Assert.AreEqual("-.tail", tail.ToString());
+      Assert.AreEqual("X-.tail", tail.ToString());
     }
 
     [Test]
@@ -60,15 +44,38 @@ namespace VMotion.Tests
     {
       var field = GCodeField.TryParse("X-tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
 
-      Assert.IsTrue(field.IsValid);
+      Assert.IsFalse(field.IsValid);
       Assert.IsFalse(field.HasArgument);
-      Assert.AreEqual('X', field.Word);
-      Assert.AreEqual("", field.RawArgument.ToString());
-      Assert.AreEqual("-tail", tail.ToString());
+      Assert.AreEqual("X-tail", tail.ToString());
     }
 
     [Test]
-    public void Trivial()
+    public void Invalid06()
+    {
+      var field = GCodeField.TryParse("endsub".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsFalse(field.IsValid);
+      Assert.IsFalse(field.HasArgument);
+      Assert.AreEqual("endsub", tail.ToString());
+    }
+
+    [Test]
+    public void NoArgument01()
+    {
+      var trivial = GCodeField.TryParse(
+        "X".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(trivial.IsValid);
+      Assert.IsFalse(trivial.HasArgument);
+      Assert.AreEqual('X', trivial.Word);
+      Assert.AreEqual("X", trivial.Raw.ToString());
+      Assert.AreEqual("", trivial.RawArgument.ToString());
+      Assert.AreEqual("", trivial.StringArgument.ToString());
+      Assert.AreEqual("", tail.ToString());
+    }
+
+    [Test]
+    public void NoArgument02()
     {
       var trivial = GCodeField.TryParse(
         "X \t".AsSpan(), out var tail, GCodeParsingSettings.Default);
@@ -80,6 +87,65 @@ namespace VMotion.Tests
       Assert.AreEqual("", trivial.RawArgument.ToString());
       Assert.AreEqual("", trivial.StringArgument.ToString());
       Assert.AreEqual(" \t", tail.ToString());
+    }
+
+    [Test]
+    public void NoArgument03()
+    {
+      var trivial = GCodeField.TryParse(
+        "X\t Y".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(trivial.IsValid);
+      Assert.IsFalse(trivial.HasArgument);
+      Assert.AreEqual('X', trivial.Word);
+      Assert.AreEqual("X", trivial.Raw.ToString());
+      Assert.AreEqual("", trivial.RawArgument.ToString());
+      Assert.AreEqual("", trivial.StringArgument.ToString());
+      Assert.AreEqual("\t Y", tail.ToString());
+    }
+
+    [Test]
+    public void NoArgument04()
+    {
+      var field = GCodeField.TryParse(
+        "X\t -Y".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsFalse(field.HasArgument);
+      Assert.AreEqual('X', field.Word);
+      Assert.AreEqual("X", field.Raw.ToString());
+      Assert.AreEqual("", field.RawArgument.ToString());
+      Assert.AreEqual("", field.StringArgument.ToString());
+      Assert.AreEqual("\t -Y", tail.ToString());
+    }
+
+    [Test]
+    public void NoArgument05()
+    {
+      var field = GCodeField.TryParse("X 9876543210".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsFalse(field.HasArgument);
+      Assert.AreEqual('X', field.Word);
+      Assert.AreEqual("X", field.Raw.ToString());
+      Assert.AreEqual("", field.RawArgument.ToString());
+      Assert.AreEqual("", field.StringArgument.ToString());
+      Assert.AreEqual(" 9876543210", tail.ToString());
+    }
+
+    [Test]
+    public void NoArgument06()
+    {
+      var field = GCodeField.TryParse(
+        "X\t .Y".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsFalse(field.HasArgument);
+      Assert.AreEqual('X', field.Word);
+      Assert.AreEqual("X", field.Raw.ToString());
+      Assert.AreEqual("", field.RawArgument.ToString());
+      Assert.AreEqual("", field.StringArgument.ToString());
+      Assert.AreEqual("\t .Y", tail.ToString());
     }
 
     [Test]
@@ -104,11 +170,11 @@ namespace VMotion.Tests
     [Test]
     public void IntArgument01()
     {
-      var field = GCodeField.TryParse("x123y1".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = GCodeField.TryParse("*123y1".AsSpan(), out var tail, GCodeParsingSettings.Default);
 
       Assert.IsTrue(field.IsValid);
       Assert.IsTrue(field.HasArgument);
-      Assert.AreEqual('X', field.Word);
+      Assert.AreEqual('*', field.Word);
       Assert.AreEqual("123", field.RawArgument.ToString());
       Assert.AreEqual(123, field.IntArgument);
       Assert.AreEqual(123.0f, field.FloatArgument);
@@ -172,6 +238,15 @@ namespace VMotion.Tests
       Assert.AreEqual(-2147483647m, field.DecimalArgument);
       Assert.AreEqual("-\t2147483647", field.StringArgument.ToString());
       Assert.AreEqual(" tail", tail.ToString());
+    }
+
+    [Test]
+    public void IntArgument05()
+    {
+      var field = GCodeField.TryParse("X9876543210tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsFalse(field.IsValid); // overflow
+      Assert.AreEqual("X9876543210tail", tail.ToString());
     }
 
     [Test]
@@ -353,8 +428,6 @@ namespace VMotion.Tests
       Assert.AreEqual(". 34", field.StringArgument.ToString());
       Assert.AreEqual("tail", tail.ToString());
     }
-
-    // todo: multiplication
 
     [Test]
     public void StringArgument01()

@@ -20,7 +20,7 @@ namespace VPlotter
     }
 
     // todo: command.Read('X', 'Y', 'Z', ref tuple)?
-
+    // todo: ReadOnlySpan<char> NotParsedRawTail { get; }
 
     public FieldsEnumerable Fields => default;
 

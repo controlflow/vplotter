@@ -38,15 +38,16 @@ namespace VMotion.Tests
       AssertScan(text: "X1234", length: 4, value: 1234, startIndex: 1);
       AssertScan(text: "X12345678", length: 8, value: 12345678, startIndex: 1);
       AssertScan(text: "X-2147483647", length: 10, value: 2147483647, startIndex: 2); // max value
-      AssertScan(text: "X-2147483648", length: 0, value: -1, startIndex: 2); // overflow
-      AssertScan(text: "Y100000000000", length: 0, value: -1, startIndex: 1); // overflow
+      AssertScan(text: "X-2147483648", length: 0, value: -2, startIndex: 2); // overflow
+      AssertScan(text: "Y100000000000", length: 0, value: -2, startIndex: 1); // overflow
+      AssertScan(text: "X9876543210t", length: 0, value: -2, startIndex: 1); // overflow
 
       static void AssertScan(string text, int length, int value, int startIndex = 0)
       {
         var index = startIndex;
         var actualValue = text.AsSpan().TryScanGCodeUnsignedInt32(ref index);
-        Assert.AreEqual(length, index - startIndex);
         Assert.AreEqual(value, actualValue);
+        Assert.AreEqual(length, index - startIndex);
       }
     }
 
