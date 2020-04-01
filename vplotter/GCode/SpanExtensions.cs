@@ -6,12 +6,6 @@ namespace VPlotter.GCode
 {
   public static class SpanExtensions
   {
-    // [return: MaybeNull]
-    // public static T FirstOrDefault<T>(in this Span<T> span)
-    // {
-    //   return span.Length > 0 ? span[0] : default;
-    // }
-
     [return: MaybeNull]
     public static T FirstOrDefault<T>(in this ReadOnlySpan<T> span)
     {
@@ -50,8 +44,7 @@ namespace VPlotter.GCode
 
     public static int TryScanGCodeUnsignedInt32(this ReadOnlySpan<char> span, ref int index)
     {
-      var start = index;
-      var value = 0;
+      int start = index, value = 0;
 
       for (; index < span.Length; index++)
       {
@@ -70,19 +63,18 @@ namespace VPlotter.GCode
         value = newValue;
       }
 
-      return start != index ? value : -1;
+      return start == index ? -1 : value;
     }
 
+    // todo: pass integral part
     public static int TryScanGCodeDecimalFractionUnsignedInt32(this ReadOnlySpan<char> span, ref int index)
     {
-      var start = index;
-      var value = 1;
-      var valueNoTrailingZeroes = 1;
+      int start = index, value = 1, valueNoTrailingZeroes = 1;
 
       for (; index < span.Length; index++)
       {
         var ch = span[index];
-        if (ch < '0' || ch > '9') break;
+        if (ch < '0' | ch > '9') break;
 
         var digit = ch - '0';
 
@@ -91,9 +83,7 @@ namespace VPlotter.GCode
           value = value * 10 + digit;
 
           if (digit != 0)
-          {
             valueNoTrailingZeroes = value;
-          }
         }
         else
         {
@@ -124,22 +114,16 @@ namespace VPlotter.GCode
         if (ch == '\'' && singleQuoteEscape)
         {
           if (index == span.Length)
-          {
             return index; // unfinished, "aaa'
-          }
 
           index++; // just skip the next character
         }
         else if (ch == '"')
         {
           if (index < span.Length && span[index] == '"')
-          {
             index++; // skip ""
-          }
           else
-          {
             return length;
-          }
         }
       }
 

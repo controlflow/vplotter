@@ -16,9 +16,10 @@ namespace VPlotter.GCode
 
       CaseNormalization = caseNormalization;
       EnableSingleQuoteEscapingInStringLiterals = enableSingleQuoteEscapingInStringLiterals;
-      IntegerArgumentsScale = integerArgumentsScale;
 
+      IntegerArgumentsScale = integerArgumentsScale;
       IntegerArgumentScaleFactor = (int) Math.Pow(10, integerArgumentsScale);
+      IntegerArgumentMaxIntegralPart = int.MaxValue / IntegerArgumentScaleFactor;
     }
 
     public GCodeCaseNormalization CaseNormalization { get; }
@@ -32,6 +33,8 @@ namespace VPlotter.GCode
     public int IntegerArgumentsScale { get; }
 
     internal int IntegerArgumentScaleFactor { get; }
+
+    internal int IntegerArgumentMaxIntegralPart { get; }
 
     /// <summary>
     /// When 'false', for S"Alex's printer" the string argument content is "Alex's printer"

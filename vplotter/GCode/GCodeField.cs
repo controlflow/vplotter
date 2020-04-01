@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -25,8 +26,8 @@ namespace VPlotter.GCode
 
     public bool IsValid => Word != default;
 
-    // todo: do we really need it? S123 Some message
-    public ReadOnlySpan<char> RawArgument => Raw.Slice(start: 1);
+    // todo: computable when edited
+    private ReadOnlySpan<char> RawArgument => Raw.Slice(start: 1);
 
     private ReadOnlySpan<char> RawArgumentNoHeadSpace
     {
@@ -38,29 +39,7 @@ namespace VPlotter.GCode
       }
     }
 
-    public bool HasArgument
-    {
-      get
-      {
-        switch (myArgumentKind)
-        {
-          case KindInternal.IntegerNoScalingNoSpace:
-          case KindInternal.IntegerNoScaling:
-          case KindInternal.IntegerNoSpace:
-          case KindInternal.Integer:
-          case KindInternal.RealNoSpace:
-          case KindInternal.Real:
-          case KindInternal.StringNoEscapeNoSpace:
-          case KindInternal.StringNoEscapeMaybeUnfinished:
-          case KindInternal.StringEscaped:
-          case KindInternal.StringEscapedWithSingleQuote:
-            return true;
-
-          default:
-            return false;
-        }
-      }
-    }
+    public bool HasArgument => Word != '\0' & myArgumentKind != KindInternal.NoArgument;
 
     public int IntArgument
     {
@@ -68,21 +47,58 @@ namespace VPlotter.GCode
       {
         switch (myArgumentKind)
         {
-          case KindInternal.IntegerNoScalingNoSpace:
           case KindInternal.IntegerNoScaling:
+          case KindInternal.IntegerScaledOverflow:
             return myPayload;
+          default:
+            return GetIntArgumentSlow();
+        }
+      }
+    }
 
-          case KindInternal.IntegerNoSpace:
-          case KindInternal.Integer:
-            return myPayload; // divide
+    [Pure]
+    private int GetIntArgumentSlow()
+    {
+      switch (myArgumentKind)
+      {
+        case KindInternal.IntegerScale1:
+          return myPayload / 10;
+        case KindInternal.IntegerScale2:
+          return myPayload / 100;
+        case KindInternal.IntegerScale3:
+          return myPayload / 1000;
+        case KindInternal.IntegerScale4:
+          return myPayload / 10000;
+        case KindInternal.IntegerScale5:
+          return myPayload / 100000;
+        case KindInternal.IntegerScaledOverflow:
+          throw new OverflowException(message: "Scaled integer is too big");
+        case KindInternal.RealNoSpace:
+        case KindInternal.Real:
+          return myPayload;
+        default:
+          throw new ArgumentOutOfRangeException(
+            message: "Integer argument missing", innerException: null);
+      }
+    }
 
+    public int ScaledIntArgument
+    {
+      get
+      {
+        switch (myArgumentKind)
+        {
+          case KindInternal.IntegerNoScaling:
+          case KindInternal.IntegerScale1:
+          case KindInternal.IntegerScale2:
+          case KindInternal.IntegerScale3:
+          case KindInternal.IntegerScale4:
+          case KindInternal.IntegerScale5:
           case KindInternal.RealNoSpace:
           case KindInternal.Real:
             return myPayload;
-
-
           default:
-            throw new ArgumentOutOfRangeException(message: "Integer argument missing", null);
+            return GetIntArgumentSlow();
         }
       }
     }
@@ -95,19 +111,28 @@ namespace VPlotter.GCode
       {
         switch (myArgumentKind)
         {
-          case KindInternal.IntegerNoScalingNoSpace:
           case KindInternal.IntegerNoScaling:
-          case KindInternal.IntegerNoSpace:
-          case KindInternal.Integer:
+          case KindInternal.IntegerScale1:
+          case KindInternal.IntegerScale2:
+          case KindInternal.IntegerScale3:
+          case KindInternal.IntegerScale4:
+          case KindInternal.IntegerScale5:
+          case KindInternal.IntegerScaledOverflow:
             return IntArgument;
           case KindInternal.RealNoSpace:
             return float.Parse(RawArgument, style: RealNumber);
           case KindInternal.Real:
             return (float) ParseDecimalIgnoreSpacing();
           default:
-            throw new ArgumentOutOfRangeException(message: "Float argument missing", null);
+            return FloatArgumentMissing();
         }
       }
+    }
+
+    private static float FloatArgumentMissing()
+    {
+      throw new ArgumentOutOfRangeException(
+        message: "Float argument missing", innerException: null);
     }
 
     public double DoubleArgument
@@ -116,19 +141,28 @@ namespace VPlotter.GCode
       {
         switch (myArgumentKind)
         {
-          case KindInternal.IntegerNoScalingNoSpace:
           case KindInternal.IntegerNoScaling:
-          case KindInternal.IntegerNoSpace:
-          case KindInternal.Integer:
+          case KindInternal.IntegerScale1:
+          case KindInternal.IntegerScale2:
+          case KindInternal.IntegerScale3:
+          case KindInternal.IntegerScale4:
+          case KindInternal.IntegerScale5:
+          case KindInternal.IntegerScaledOverflow:
             return IntArgument;
           case KindInternal.RealNoSpace:
             return double.Parse(RawArgument, style: RealNumber);
           case KindInternal.Real:
             return (double) ParseDecimalIgnoreSpacing();
           default:
-            throw new ArgumentOutOfRangeException(message: "No argument", null);
+            return DoubleArgumentMissing();
         }
       }
+    }
+
+    private static double DoubleArgumentMissing()
+    {
+      throw new ArgumentOutOfRangeException(
+        message: "Double argument missing", innerException: null);
     }
 
     public decimal DecimalArgument
@@ -137,19 +171,28 @@ namespace VPlotter.GCode
       {
         switch (myArgumentKind)
         {
-          case KindInternal.IntegerNoScalingNoSpace:
           case KindInternal.IntegerNoScaling:
-          case KindInternal.IntegerNoSpace:
-          case KindInternal.Integer:
+          case KindInternal.IntegerScale1:
+          case KindInternal.IntegerScale2:
+          case KindInternal.IntegerScale3:
+          case KindInternal.IntegerScale4:
+          case KindInternal.IntegerScale5:
+          case KindInternal.IntegerScaledOverflow:
             return IntArgument;
           case KindInternal.RealNoSpace:
             return decimal.Parse(RawArgument, style: RealNumber);
           case KindInternal.Real:
             return ParseDecimalIgnoreSpacing();
           default:
-            throw new ArgumentOutOfRangeException(message: "No argument", null);
+            return DecimalArgumentMissing();
         }
       }
+    }
+
+    private static decimal DecimalArgumentMissing()
+    {
+      throw new ArgumentOutOfRangeException(
+        message: "Decimal argument missing", innerException: null);
     }
 
     private decimal ParseDecimalIgnoreSpacing()
@@ -193,38 +236,6 @@ namespace VPlotter.GCode
       return first == '-' ? integer - fractionDec : integer + fractionDec;
     }
 
-    public int IntArgumentScaled
-    {
-      get
-      {
-        switch (myArgumentKind)
-        {
-          case KindInternal.NoArgument:
-            break;
-          case KindInternal.IntegerNoScalingNoSpace:
-            break;
-          case KindInternal.RealNoSpace:
-            break;
-          case KindInternal.Integer:
-            break;
-          case KindInternal.Real:
-            break;
-          case KindInternal.StringNoEscapeNoSpace:
-            break;
-          case KindInternal.StringNoEscapeMaybeUnfinished:
-            break;
-          case KindInternal.StringEscaped:
-            break;
-          case KindInternal.StringEscapedWithSingleQuote:
-            break;
-          default:
-            throw new ArgumentOutOfRangeException();
-        }
-
-        return 0;
-      }
-    }
-
     public ReadOnlySpan<char> StringArgument
     {
       get
@@ -232,12 +243,14 @@ namespace VPlotter.GCode
         switch (myArgumentKind)
         {
           case KindInternal.NoArgument:
-          case KindInternal.IntegerNoScalingNoSpace:
-          case KindInternal.IntegerNoSpace:
-          case KindInternal.RealNoSpace:
-            return RawArgument;
           case KindInternal.IntegerNoScaling:
-          case KindInternal.Integer:
+          case KindInternal.IntegerScale1:
+          case KindInternal.IntegerScale2:
+          case KindInternal.IntegerScale3:
+          case KindInternal.IntegerScale4:
+          case KindInternal.IntegerScale5:
+          case KindInternal.IntegerScaledOverflow:
+          case KindInternal.RealNoSpace:
           case KindInternal.Real:
             return RawArgumentNoHeadSpace;
           case KindInternal.StringNoEscapeNoSpace:
@@ -249,7 +262,8 @@ namespace VPlotter.GCode
           case KindInternal.StringEscapedWithSingleQuote:
             return DecodeStringLiteral(decodeSingleQuotes: true);
           default:
-            throw new ArgumentOutOfRangeException();
+            throw new ArgumentOutOfRangeException(
+              message: "String argument missing", innerException: null);
         }
       }
     }
@@ -291,9 +305,11 @@ namespace VPlotter.GCode
 
     public static GCodeField TryParse(ReadOnlySpan<char> line, out ReadOnlySpan<char> tail, GCodeParsingSettings settings)
     {
-      tail = line;
-
-      if (line.Length == 0) return default;
+      if (line.Length == 0)
+      {
+        tail = line;
+        return default;
+      }
 
       var word = line[0];
       if (word >= 'A' && word <= 'Z')
@@ -306,6 +322,7 @@ namespace VPlotter.GCode
       }
       else if (word != '*') // checksum
       {
+        tail = line;
         return default; // unknown word
       }
 
@@ -328,10 +345,10 @@ namespace VPlotter.GCode
       }
 
       var integerValue = line.TryScanGCodeUnsignedInt32(ref index);
-      if (integerValue < 0) // "X" or "X-" or "X +", no digits scanned or overflow
+      if (integerValue < 0) // "X" or "X-" or "X +", no digits scanned, or overflow
       {
         // still can be "X-.1" or "X.1"
-        if (index >= line.Length || line[index] != '.') goto NoArgumentIfSpaced;
+        if (index >= line.Length || line[index] != '.') goto NoArgumentIfSpaced; // overflow
 
         integerValue = 0;
         firstChar = '.'; // re-use variable as a flag
@@ -347,20 +364,24 @@ namespace VPlotter.GCode
 
       if (indexAfterDigit >= line.Length || line[indexAfterDigit] != '.') // "X123"
       {
+        KindInternal integerKind;
+
         if (settings.IntegerArgumentsScale == 0)
         {
-          var integerKind = space == 0 ? KindInternal.IntegerNoScalingNoSpace : KindInternal.IntegerNoScaling;
-          return new GCodeField(word, line.SplitAt(index, out tail), integerKind, payload: integerValue);
+          integerKind = KindInternal.IntegerNoScaling;
+        }
+        else if (integerValue > settings.IntegerArgumentMaxIntegralPart)
+        {
+          integerKind = KindInternal.IntegerScaledOverflow;
         }
         else
         {
-          // todo: can be overflow
-
-          var scaledValue = index * settings.IntegerArgumentScaleFactor;
-          var integerKind = space == 0 ? KindInternal.IntegerNoSpace : KindInternal.Integer;
-
-          return new GCodeField(word, line.SplitAt(index, out tail), integerKind, payload: scaledValue);
+          integerValue *= settings.IntegerArgumentScaleFactor;
+          integerKind = KindInternal.IntegerNoScaling + (ushort) settings.IntegerArgumentsScale;
         }
+
+        var rawField = line.SplitAt(index, out tail);
+        return new GCodeField(word, rawField, integerKind, payload: integerValue);
       }
 
       var indexAfterDot = indexAfterDigit + 1;
@@ -383,7 +404,11 @@ namespace VPlotter.GCode
       NoArgumentIfSpaced:
 
       index = 1;
-      if (line.SkipWhitespace(ref index) == 0) return default;
+      if (line.SkipWhitespace(ref index) == 0)
+      {
+        tail = line;
+        return default;
+      }
 
       NoArgument:
       return new GCodeField(word, line.SplitAt(index: 1, out tail), KindInternal.NoArgument);
@@ -409,30 +434,29 @@ namespace VPlotter.GCode
       return singleQuoteEscape ? KindInternal.StringEscapedWithSingleQuote : KindInternal.StringEscaped;
     }
 
-    private enum KindInternal : short
+    // note: do not reorder
+    private enum KindInternal : ushort
     {
-      //                          sample    payload
-      NoArgument,              // X         -1
+      //                                sample    payload
+      IntegerNoScaling,              // X 123     123
+      IntegerScale1,                 // X 123     1230
+      IntegerScale2,                 // X 123     12300
+      IntegerScale3,                 // X 123     123000
+      IntegerScale4,                 // X 123     1230000
+      IntegerScale5,                 // X 123     12300000
+      IntegerScaledOverflow,         // X 123456  123456
+      RealNoSpace,                   // X123.45   123 / 123450
+                                     // X123.     123 / 123000
+      Real,                          // X - 1 .   -1  / -1000
+                                     // X .123    0   / 123
 
-      IntegerNoScalingNoSpace, // X123      123
-      IntegerNoSpace,          // X123      123000
-      IntegerNoScaling,        // X 123     123
-      Integer,                 // X 123     123000
+      StringNoEscapeNoSpace,         // X"ab"     2
+      StringNoEscapeMaybeUnfinished, // X "abc"   3
+                                     // X"abc     3
+      StringEscaped,                 // X"ab""c"  3
+      StringEscapedWithSingleQuote,  // X"'A'B"   2
 
-      RealNoSpace,    // X123.45   123 / 123450
-                      // X123.     123 / 123000
-
-
-      Real,           // X - 1 .
-                      // X.123     0
-
-      StringNoEscapeNoSpace,         // X"abc"
-      StringNoEscapeMaybeUnfinished, // X "abc"
-                                     // X"abc
-      StringEscaped,                 // X"ab""c"
-      StringEscapedWithSingleQuote,  // X"'A'B"
-
-      //A = 10
+      NoArgument,                    // X         0
     }
   }
 }
