@@ -1,6 +1,6 @@
 using System;
 
-namespace VPlotter
+namespace VPlotter.GCode
 {
   public readonly ref struct GCodeCommand
   {

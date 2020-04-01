@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace VPlotter
+namespace VPlotter.GCode
 {
   [StructLayout(LayoutKind.Auto)]
   public readonly ref struct GCodeComment

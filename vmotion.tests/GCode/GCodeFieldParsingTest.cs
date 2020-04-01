@@ -1,9 +1,10 @@
 using System;
 using NUnit.Framework;
-using VPlotter;
+using VPlotter.GCode;
+
 // ReSharper disable StringLiteralTypo
 
-namespace VMotion.Tests
+namespace VMotion.Tests.GCode
 {
   [TestFixture]
   public class GCodeFieldParsingTest

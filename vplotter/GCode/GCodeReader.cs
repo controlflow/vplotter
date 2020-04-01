@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace VPlotter
+namespace VPlotter.GCode
 {
   // https://duet3d.dozuki.com/Wiki/Gcode
   // https://github.com/synthetos/g2/wiki/GCode-Parsing

@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace VPlotter
+namespace VPlotter.GCode
 {
   [StructLayout(LayoutKind.Auto)]
   public readonly ref struct GCodeField

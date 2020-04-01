@@ -1,8 +1,8 @@
 using System;
 using NUnit.Framework;
-using VPlotter;
+using VPlotter.GCode;
 
-namespace VMotion.Tests
+namespace VMotion.Tests.GCode
 {
   [TestFixture]
   public class GCodeCommentParsingTest
