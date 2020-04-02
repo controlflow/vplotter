@@ -66,41 +66,60 @@ namespace VPlotter.GCode
       return start == index ? -1 : value;
     }
 
-    // todo: pass integral part
-    public static int TryScanGCodeDecimalFractionUnsignedInt32(this ReadOnlySpan<char> span, ref int index)
+    public static int TryScanGCodeDecimalFractionUnsignedInt32(
+      this ReadOnlySpan<char> span, ref int index, int scale, int integralValue = 0)
     {
-      int start = index, value = 1, valueNoTrailingZeroes = 1;
+      int start = index, value = integralValue;
 
-      for (; index < span.Length; index++)
+      // scan required scale
+      for (; scale > 0 && index < span.Length; scale--, index++)
       {
         var ch = span[index];
         if (ch < '0' | ch > '9') break;
 
         var digit = ch - '0';
+        var newValue = value * 10 + digit;
 
-        if (value >= 0 && value < 1000000000)
+        if (value > 214748364 | newValue < 0)
         {
-          value = value * 10 + digit;
+          if (scale > int.MaxValue / 2) return value; // detect max scale
 
-          if (digit != 0)
-            valueNoTrailingZeroes = value;
+          value = -2; // overflow
+          goto SkipTrailing;
         }
-        else
-        {
-          value = -1;
 
-          if (digit != 0)
+        value = newValue;
+      }
+
+      if (start != index)
+      {
+        if (scale > int.MaxValue / 2) return value; // detect max scale
+
+        for (; scale > 0; scale--)
+        {
+          if (value > 214748364)
           {
-            index = start;
-            return -1;
+            value = -2; // overflow
+            goto SkipTrailing;
           }
+
+          value *= 10;
         }
       }
 
-      return start == index ? -1 : valueNoTrailingZeroes;
+      // scan trailing digits
+      SkipTrailing:
+      for (; index < span.Length; index++)
+      {
+        var ch = span[index];
+        if (ch < '0' | ch > '9') break;
+      }
+
+      return start == index ? -1 : value;
     }
 
-    public static int TryScanGCodeDoubleQuotedStringLiteral(this ReadOnlySpan<char> span, ref int index, bool singleQuoteEscape)
+    public static int TryScanGCodeDoubleQuotedStringLiteral(
+      this ReadOnlySpan<char> span, ref int index, bool singleQuoteEscape)
     {
       if (span.Length == index) return -1;
       if (span[index] != '"') return -1;

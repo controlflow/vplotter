@@ -8,18 +8,18 @@ namespace VPlotter.GCode
 
     public GCodeParsingSettings(
       GCodeCaseNormalization caseNormalization = GCodeCaseNormalization.ToUppercase,
-      int integerArgumentsScale = 0,
+      int integerArgumentScale = 0,
       bool enableSingleQuoteEscapingInStringLiterals = false)
     {
-      if (integerArgumentsScale < 0 || integerArgumentsScale > 5)
-        throw new ArgumentOutOfRangeException(nameof(integerArgumentsScale));
+      if (integerArgumentScale < 0 || integerArgumentScale > 5)
+        throw new ArgumentOutOfRangeException(nameof(integerArgumentScale));
 
       CaseNormalization = caseNormalization;
       EnableSingleQuoteEscapingInStringLiterals = enableSingleQuoteEscapingInStringLiterals;
 
-      IntegerArgumentsScale = integerArgumentsScale;
-      IntegerArgumentScaleFactor = (int) Math.Pow(10, integerArgumentsScale);
-      IntegerArgumentMaxIntegralPart = int.MaxValue / IntegerArgumentScaleFactor;
+      IntegerArgumentScale = (byte) integerArgumentScale;
+      myIntegerArgumentScaleFactor = (int) Math.Pow(10, integerArgumentScale);
+      myIntegerArgumentMaxIntegralPart = int.MaxValue / myIntegerArgumentScaleFactor;
     }
 
     public GCodeCaseNormalization CaseNormalization { get; }
@@ -30,11 +30,21 @@ namespace VPlotter.GCode
     /// For X12.3456 and the scale factor is 2, the .IntArgumentScaled is equal to 1234.
     /// Allowed values: 0 - 5.
     /// </summary>
-    public int IntegerArgumentsScale { get; }
+    public byte IntegerArgumentScale { get; }
 
-    internal int IntegerArgumentScaleFactor { get; }
+    private readonly int myIntegerArgumentScaleFactor;
+    private readonly int myIntegerArgumentMaxIntegralPart;
 
-    internal int IntegerArgumentMaxIntegralPart { get; }
+    internal int ScaleInteger(int integralValue, int sign)
+    {
+      if (IntegerArgumentScale == 0)
+        return integralValue / sign;
+
+      if (integralValue > myIntegerArgumentMaxIntegralPart)
+        return int.MinValue;
+
+      return integralValue / sign * myIntegerArgumentScaleFactor;
+    }
 
     /// <summary>
     /// When 'false', for S"Alex's printer" the string argument content is "Alex's printer"

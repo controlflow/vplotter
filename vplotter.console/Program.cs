@@ -1,14 +1,20 @@
 ﻿using System;
 using System.IO;
+using VPlotter.GCode;
 
 namespace VPlotter.Console
 {
+
+
   public static class Program
   {
     private static void Main()
     {
+      var layout = ObjectLayoutInspector.TypeLayout.GetLayout(typeof(GCodeField));
 
+      System.Console.WriteLine(layout);
 
+      return;
 
       //var log10 = (int) Math.Log10(9234);
 

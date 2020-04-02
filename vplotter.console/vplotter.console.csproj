@@ -11,4 +11,8 @@
       <ProjectReference Include="..\vplotter\vplotter.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="ObjectLayoutInspector" Version="0.1.1" />
+    </ItemGroup>
+
 </Project>

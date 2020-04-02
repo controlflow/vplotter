@@ -54,32 +54,34 @@ namespace VMotion.Tests.GCode
     [Test]
     public void TryScanUnsignedDecimalFraction()
     {
+      AssertScan(text: "", length: 0, value: -1);
       AssertScan(text: "X", length: 0, value: -1);
-      AssertScan(text: "0", length: 1, value: 1);
-      AssertScan(text: "1", length: 1, value: 11);
-      AssertScan(text: "2", length: 1, value: 12);
-      AssertScan(text: "9", length: 1, value: 19);
-      AssertScan(text: "09", length: 2, value: 109);
-      AssertScan(text: "90b", length: 2, value: 19);
-      AssertScan(text: "b90000", startIndex: 1, length: 5, value: 19);
-      AssertScan(text: "90000000000000000000", length: 20, value: 19);
-      AssertScan(text: "1000000000000000000000000000000000000000b", length: 40, value: 11);
-      AssertScan(text: "0000000000000000000000000000000000000000", length: 40, value: 1);
-      AssertScan(text: "999999999", length: 9, value: 1999999999);
-      AssertScan(text: "1000000000", length: 10, value: 11);
-      AssertScan(text: "0000000001", length: 0, value: -1);
-      AssertScan(text: "0000000000000000001", length: 0, value: -1);
-      AssertScan(text: "1000000001", length: 0, value: -1);
+      AssertScan(text: "123", length: 3, value: 0);
+      AssertScan(text: "765", length: 3, value: 7, scale: 1);
+      AssertScan(text: "2.1", length: 1, value: 2, startIndex: 2, integralValue: 2);
+      AssertScan(text: "2.1", length: 1, value: 21, startIndex: 2, integralValue: 2, scale: 1);
+      AssertScan(text: "2.1", length: 1, value: 210, startIndex: 2, integralValue: 2, scale: 2);
+      AssertScan(text: "2.1", length: 1, value: 2100, startIndex: 2, integralValue: 2, scale: 3);
+      AssertScan(text: "2.1", length: 1, value: 21000, startIndex: 2, integralValue: 2, scale: 4);
+      AssertScan(text: "2.1", length: 1, value: 210000, startIndex: 2, integralValue: 2, scale: 5);
+      AssertScan(text: "1.2345678901", length: 10, value: 1, startIndex: 2, integralValue: 1);
+      AssertScan(text: "1.2345678901", length: 10, value: 12, startIndex: 2, integralValue: 1, scale: 1);
+      AssertScan(text: "1.2345678901", length: 10, value: 123, startIndex: 2, integralValue: 1, scale: 2);
+      AssertScan(text: "1.2345678901", length: 10, value: 1234, startIndex: 2, integralValue: 1, scale: 3);
+      AssertScan(text: "1.2345678901", length: 10, value: 12345, startIndex: 2, integralValue: 1, scale: 4);
+      AssertScan(text: "1.2345678901", length: 10, value: 123456, startIndex: 2, integralValue: 1, scale: 5);
+      AssertScan(text: "214.7483647", length: 7, value: 2147483647, startIndex: 4, integralValue: 214, scale: 7);
+      AssertScan(text: "214.7483647999tt", length: 10, value: 2147483647, startIndex: 4, integralValue: 214, scale: 7);
+      AssertScan(text: "214.7483648", length: 7, value: -2, startIndex: 4, integralValue: 214, scale: 7);
 
       // todo: default value inspection not working
 
-      static void AssertScan(string text, int length, int value, int startIndex = 0)
+      static void AssertScan(string text, int length, int value, int startIndex = 0, int integralValue = 0, int scale = 0)
       {
         var index = startIndex;
-        var actualValue = text.AsSpan().TryScanGCodeDecimalFractionUnsignedInt32(ref index);
+        var actualValue = text.AsSpan().TryScanGCodeDecimalFractionUnsignedInt32(ref index, scale, integralValue);
         Assert.AreEqual(length, index - startIndex);
         Assert.AreEqual(value, actualValue);
-        // todo: return and assert scale?
       }
     }
 
