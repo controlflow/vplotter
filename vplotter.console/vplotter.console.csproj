@@ -2,17 +2,13 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <TargetFramework>net5.0</TargetFramework>
         <RootNamespace>VPlotter.Console</RootNamespace>
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\vplotter\vplotter.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <PackageReference Include="ObjectLayoutInspector" Version="0.1.1" />
     </ItemGroup>
 
 </Project>

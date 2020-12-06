@@ -1,8 +1,10 @@
 using System;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 
 namespace VPlotter.GCode
 {
+  [PublicAPI]
   [StructLayout(LayoutKind.Auto)]
   public readonly ref struct GCodeComment
   {
@@ -47,6 +49,7 @@ namespace VPlotter.GCode
       Raw = comment;
     }
 
+    [Pure]
     public static GCodeComment TryParse(ReadOnlySpan<char> line, out ReadOnlySpan<char> tail)
     {
       switch (line.FirstOrDefault())

@@ -10,9 +10,9 @@ namespace VPlotter.Console
   {
     private static void Main()
     {
-      var layout = ObjectLayoutInspector.TypeLayout.GetLayout(typeof(GCodeField));
+      //var layout = ObjectLayoutInspector.TypeLayout.GetLayout(typeof(GCodeField));
 
-      System.Console.WriteLine(layout);
+      //System.Console.WriteLine(layout);
 
       return;
 

@@ -50,7 +50,7 @@ namespace VPlotterCore
       {
 
         Console.Write("high=");
-        var delay1 = int.Parse(Console.ReadLine()) * 1000;
+        var delay1 = int.Parse(Console.ReadLine()!) * 1000;
         Console.Write("dir?");
         var dir = string.IsNullOrEmpty(Console.ReadLine());
 

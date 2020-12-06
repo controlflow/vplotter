@@ -4,42 +4,43 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using JetBrains.Annotations;
 
 namespace VPlotter.GCode
 {
+  [PublicAPI]
   [StructLayout(LayoutKind.Auto)]
+  [DebuggerDisplay("{ToString(),raw}")]
   public readonly ref struct GCodeField
   {
     private readonly char myWord; // 2 bytes
     private readonly ArgumentKind myKind; // 1 byte
-    private readonly byte myScale; // 1 byte
     private readonly int myPayload1; // 4 bytes
     private readonly int myPayload2; // 4 bytes
     private readonly ReadOnlySpan<char> myRaw; // 4/8 bytes + 4 byte + 4 bytes padding
 
-
     private GCodeField(
-      char word, ReadOnlySpan<char> raw, ArgumentKind kind, byte scale)
+      char word, ReadOnlySpan<char> raw, ArgumentKind kind)
     {
       myWord = word;
       myRaw = raw;
       myKind = kind;
-      myScale = scale;
       myPayload1 = 0;
       myPayload2 = 0;
     }
 
     private GCodeField(
-      char word, ReadOnlySpan<char> raw, ArgumentKind kind, byte scale, int payload1, int payload2)
+      char word, ReadOnlySpan<char> raw, ArgumentKind kind, int payload1, int payload2)
     {
       myWord = word;
       myRaw = raw;
       myKind = kind;
-      myScale = scale;
       myPayload1 = payload1;
       myPayload2 = payload2;
     }
 
+    [ValueRange('a', 'z')]
+    [ValueRange('A', 'Z')]
     public char Word => myWord;
 
     public bool IsValid => myWord != default;
@@ -278,6 +279,46 @@ namespace VPlotter.GCode
       return builder.ToString().AsSpan();
     }
 
+    public Code CodeArgument
+    {
+      get
+      {
+        switch (myKind)
+        {
+          case ArgumentKind.Integer when (uint) myPayload1 <= short.MaxValue:
+            return (Code) (myWord << 24 | (short) myPayload1);
+
+          case ArgumentKind.RealNoSpace:
+          case ArgumentKind.Real:
+            return CodeArgumentWithSubcode();
+
+          default:
+            return Code.Invalid;
+        }
+      }
+    }
+
+    [Pure]
+    private Code CodeArgumentWithSubcode()
+    {
+      var index = 1;
+      myRaw.SkipWhitespace(ref index);
+
+      var codeValue = myRaw.TryScanGCodeUnsignedInt32(ref index);
+      if (codeValue < 0 || codeValue > short.MaxValue) return default;
+
+      myRaw.SkipWhitespace(ref index);
+
+      if (myRaw[index++] != '.') return default;
+
+      myRaw.SkipWhitespace(ref index);
+
+      var subcodeValue = myRaw.TryScanGCodeUnsignedInt32(ref index);
+      if (subcodeValue < 0 || subcodeValue > byte.MaxValue) return default;
+
+      return (Code) (myWord << 24 | (short) codeValue | ((byte) subcodeValue << 16));
+    }
+
     public override string ToString() => myRaw.ToString();
 
     public static GCodeField TryParse(ReadOnlySpan<char> line, out ReadOnlySpan<char> tail, GCodeParsingSettings settings)
@@ -314,7 +355,7 @@ namespace VPlotter.GCode
         var literalKind = ParseStringLiteral(line, ref index, settings, out var length);
         var raw = line.SplitAt(index, out tail);
 
-        return new GCodeField(word, raw, literalKind, scale: 0, payload1: length, payload2: 0);
+        return new GCodeField(word, raw, literalKind, payload1: length, payload2: 0);
       }
 
       var sign = 1;
@@ -346,8 +387,7 @@ namespace VPlotter.GCode
         var raw = line.SplitAt(index, out tail);
 
         return new GCodeField(
-          word, raw, ArgumentKind.Integer, scale: settings.IntegerArgumentScale,
-          payload1: integralValue / sign, payload2: scaledInt);
+          word, raw, ArgumentKind.Integer, payload1: integralValue / sign, payload2: scaledInt);
       }
 
       var indexAfterDot = indexAfterDigit + 1;
@@ -363,14 +403,12 @@ namespace VPlotter.GCode
         // "X123."
         return new GCodeField(
           word, line.SplitAt(indexAfterDigit + 1, out tail),
-          realKind, scale: settings.IntegerArgumentScale,
-          payload1: integralValue / sign, payload2: 0);
+          realKind, payload1: integralValue / sign, payload2: 0);
       }
 
       // 123.456
       return new GCodeField(
-        word, line.SplitAt(indexAfterDot, out tail),
-        realKind, scale: settings.IntegerArgumentScale,
+        word, line.SplitAt(indexAfterDot, out tail), realKind,
         payload1: integralValue / sign,
         payload2: scaledValue > 0 ? (scaledValue * sign) : int.MinValue);
 
@@ -387,7 +425,7 @@ namespace VPlotter.GCode
       NoArgument:
       return new GCodeField(
         word, line.SplitAt(index: 1, out tail),
-        ArgumentKind.NoArgument, scale: settings.IntegerArgumentScale,
+        ArgumentKind.NoArgument,
         payload1: 0, payload2: 0);
     }
 
@@ -412,19 +450,18 @@ namespace VPlotter.GCode
       return singleQuoteEscape ? ArgumentKind.StringEscapedWithSingleQuote : ArgumentKind.StringEscaped;
     }
 
-    // todo: finish
+    // todo: finish those methods?
+    // todo: or better to remove? we are only reading the fields
     public static GCodeField Create(char word)
     {
-      return new GCodeField(
-        word, ReadOnlySpan<char>.Empty, ArgumentKind.NoArgument,
-        scale: 0, payload1: 0, payload2: 0);
+      return new GCodeField(word, ReadOnlySpan<char>.Empty, ArgumentKind.NoArgument);
     }
 
     public static GCodeField Create(char word, int argument)
     {
       return new GCodeField(
         word, ReadOnlySpan<char>.Empty, ArgumentKind.Integer,
-        scale: 0, payload1: argument, payload2: int.MinValue);
+        payload1: argument, payload2: int.MinValue);
     }
 
     public static GCodeField Create(char word, float argument)
@@ -439,7 +476,6 @@ namespace VPlotter.GCode
       // todo: float-based field
       return new GCodeField(
         word, ReadOnlySpan<char>.Empty, ArgumentKind.DoubleValue,
-        scale: 0,
         payload1: (int) (bits >> 32),
         payload2: (int) bits);
     }
@@ -471,13 +507,13 @@ namespace VPlotter.GCode
       // todo: produce ' for lowercase letters?
       return new GCodeField(
         word, ReadOnlySpan<char>.Empty, ArgumentKind.StringNoEscapeNoSpace,
-        scale: 0, payload1: 0, payload2: 0);
+        payload1: 0, payload2: 0);
     }
 
     // note: do not reorder
     private enum ArgumentKind : byte
     {
-      //                                sample    payload2
+      //                                sample    payload1  payload2
       Integer,                       // X 123     123
 
       RealNoSpace,                   // X123.45   123

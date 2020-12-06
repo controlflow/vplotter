@@ -6,12 +6,14 @@ namespace VPlotter.GCode
 {
   public static class SpanExtensions
   {
+    [Pure]
     [return: MaybeNull]
     public static T FirstOrDefault<T>(in this ReadOnlySpan<T> span)
     {
       return span.Length > 0 ? span[0] : default;
     }
 
+    [Pure]
     [return: MaybeNull]
     public static bool EndsWith<T>(this ReadOnlySpan<T> span, T value)
       where T : IEquatable<T>
@@ -27,6 +29,7 @@ namespace VPlotter.GCode
       return span.Slice(start: 0, length: index);
     }
 
+    [Pure]
     public static int SkipWhitespace(this ReadOnlySpan<char> span, ref int index)
     {
       var skipped = 0;
@@ -42,6 +45,15 @@ namespace VPlotter.GCode
       return skipped;
     }
 
+    [Pure]
+    public static ReadOnlySpan<char> SkipWhitespace(this ReadOnlySpan<char> span)
+    {
+      var index = 0;
+      span.SkipWhitespace(ref index);
+      return span.Slice(index);
+    }
+
+    [Pure]
     public static int TryScanGCodeUnsignedInt32(this ReadOnlySpan<char> span, ref int index)
     {
       int start = index, value = 0;
@@ -66,6 +78,7 @@ namespace VPlotter.GCode
       return start == index ? -1 : value;
     }
 
+    [Pure]
     public static int TryScanGCodeDecimalFractionUnsignedInt32(
       this ReadOnlySpan<char> span, ref int index, int scale, int integralValue = 0)
     {
@@ -118,6 +131,7 @@ namespace VPlotter.GCode
       return start == index ? -1 : value;
     }
 
+    [Pure]
     public static int TryScanGCodeDoubleQuotedStringLiteral(
       this ReadOnlySpan<char> span, ref int index, bool singleQuoteEscape)
     {

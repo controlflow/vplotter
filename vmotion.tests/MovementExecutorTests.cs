@@ -5,8 +5,8 @@ namespace VMotion.Tests
   [TestFixture]
   public class MovementExecutorTests
   {
-    private TestStepperOutput myTestOutput;
-    private MovementExecutor myMovementExecutor;
+    private MovementExecutor myMovementExecutor = null!;
+    private TestStepperOutput myTestOutput = null!;
 
     [SetUp]
     public void SetUp()

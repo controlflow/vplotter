@@ -1,7 +1,9 @@
 using System;
+using JetBrains.Annotations;
 
 namespace VPlotter.GCode
 {
+  [PublicAPI]
   public sealed class GCodeParsingSettings
   {
     public static readonly GCodeParsingSettings Default = new GCodeParsingSettings();

@@ -2,7 +2,6 @@ using System;
 using NUnit.Framework;
 using VPlotter.GCode;
 // ReSharper disable AssignmentIsFullyDiscarded
-
 // ReSharper disable StringLiteralTypo
 
 namespace VMotion.Tests.GCode
@@ -18,6 +17,7 @@ namespace VMotion.Tests.GCode
       Assert.IsFalse(field.IsValid);
       Assert.IsFalse(field.HasArgument);
       Assert.AreEqual('\0', field.Word);
+      Assert.AreEqual(Code.Invalid, field.CodeArgument);
       Assert.AreEqual(" ", tail.ToString());
     }
 
@@ -548,6 +548,45 @@ namespace VMotion.Tests.GCode
       Assert.AreEqual("S\"'Foo''Bar", field.Raw.ToString());
       Assert.AreEqual("foo'Bar", field.StringArgument.ToString());
       Assert.AreEqual("", tail.ToString());
+    }
+
+    [Test]
+    public void CodeArgument01()
+    {
+      var field = GCodeField.TryParse("G0 X0".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsTrue(field.HasArgument);
+      Assert.AreEqual('G', field.Word);
+      Assert.AreEqual("G0", field.Raw.ToString());
+      Assert.AreEqual(0, field.IntArgument);
+      Assert.AreEqual(Code.G0_RapidMove, field.CodeArgument);
+      Assert.AreEqual(" X0", tail.ToString());
+    }
+
+    [Test]
+    public void CodeArgument02()
+    {
+      var field = GCodeField.TryParse("G1 X0 Y0".AsSpan(), out var tail, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.IsTrue(field.HasArgument);
+      Assert.AreEqual('G', field.Word);
+      Assert.AreEqual("G1", field.Raw.ToString());
+      Assert.AreEqual(1, field.IntArgument);
+      Assert.AreEqual(Code.G1_LinearMove, field.CodeArgument);
+      Assert.AreEqual(" X0 Y0", tail.ToString());
+    }
+
+    [Test]
+    public void CodeArgument03()
+    {
+      var field = GCodeField.TryParse("G1.42".AsSpan(), out _, GCodeParsingSettings.Default);
+
+      Assert.IsTrue(field.IsValid);
+      Assert.AreEqual('G', field.Word);
+      // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
+      Assert.AreEqual(Code.G1_LinearMove | (Code) (42 << 16), field.CodeArgument);
     }
 
     [Test]

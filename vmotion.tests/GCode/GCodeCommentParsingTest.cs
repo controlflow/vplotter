@@ -7,10 +7,13 @@ namespace VMotion.Tests.GCode
   [TestFixture]
   public class GCodeCommentParsingTest
   {
+    private static GCodeComment Parse(string text, out ReadOnlySpan<char> tail)
+      => GCodeComment.TryParse(text.AsSpan(), out tail);
+
     [Test]
     public void NotComment()
     {
-      var comment = GCodeComment.TryParse("hello".AsSpan(), out var tail);
+      var comment = Parse("hello", out var tail);
 
       Assert.That(comment.IsValid, Is.False);
       Assert.That(tail.ToString(), Is.EqualTo("hello"));
@@ -26,7 +29,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void EndOfLineComment()
     {
-      var comment = GCodeComment.TryParse("; comment".AsSpan(), out var tail);
+      var comment = Parse("; comment", out var tail);
 
       Assert.That(comment.IsValid, Is.True);
       Assert.That(comment.Kind, Is.EqualTo(GCodeCommentKind.EndOfLine));
@@ -38,7 +41,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void InlineComment()
     {
-      var comment = GCodeComment.TryParse("( comment ) bb".AsSpan(), out var tail);
+      var comment = Parse("( comment ) bb", out var tail);
 
       Assert.That(comment.IsValid, Is.True);
       Assert.That(comment.Kind, Is.EqualTo(GCodeCommentKind.Inline));
@@ -50,7 +53,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void UnfinishedInlineComment()
     {
-      var comment = GCodeComment.TryParse("( comment  ".AsSpan(), out var tail);
+      var comment = Parse("( comment  ", out var tail);
 
       Assert.That(comment.IsValid, Is.True);
       Assert.That(comment.Kind, Is.EqualTo(GCodeCommentKind.InlineUnfinished));
