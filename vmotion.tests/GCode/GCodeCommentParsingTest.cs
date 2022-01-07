@@ -1,14 +1,15 @@
 using System;
 using NUnit.Framework;
 using VPlotter.GCode;
+using VPlotter.GCode.Reader;
 
 namespace VMotion.Tests.GCode
 {
   [TestFixture]
   public class GCodeCommentParsingTest
   {
-    private static GCodeComment Parse(string text, out ReadOnlySpan<char> tail)
-      => GCodeComment.TryParse(text.AsSpan(), out tail);
+    private static GCodeCommentSpan Parse(string text, out ReadOnlySpan<char> tail)
+      => GCodeCommentSpan.TryParse(text.AsSpan(), out tail);
 
     [Test]
     public void NotComment()

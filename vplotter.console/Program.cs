@@ -1,11 +1,8 @@
-﻿using System;
-using System.IO;
-using VPlotter.GCode;
+﻿using System.IO;
+using VPlotter.GCode.Reader;
 
 namespace VPlotter.Console
 {
-
-
   public static class Program
   {
     private static void Main()

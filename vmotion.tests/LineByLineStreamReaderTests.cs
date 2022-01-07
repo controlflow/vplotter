@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using NUnit.Framework;
 using VPlotter;
+using VPlotter.GCode.Reader;
 
 namespace VMotion.Tests
 {

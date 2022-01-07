@@ -1,6 +1,7 @@
 using System;
 using NUnit.Framework;
 using VPlotter.GCode;
+using VPlotter.GCode.Reader;
 // ReSharper disable AssignmentIsFullyDiscarded
 // ReSharper disable StringLiteralTypo
 
@@ -9,10 +10,15 @@ namespace VMotion.Tests.GCode
   [TestFixture]
   public class GCodeFieldParsingTest
   {
+    private static GCodeFieldSpan Parse(string line, out ReadOnlySpan<char> tail)
+    {
+      return GCodeFieldSpan.TryParse(line.AsSpan(), out tail, GCodeParsingSettings.Default);
+    }
+
     [Test]
     public void Invalid01()
     {
-      var field = GCodeField.TryParse(" ".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse(" ", out var tail);
 
       Assert.IsFalse(field.IsValid);
       Assert.IsFalse(field.HasArgument);
@@ -24,7 +30,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void Invalid02()
     {
-      var field = GCodeField.TryParse("X.tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse("X.tail", out var tail);
 
       Assert.IsFalse(field.IsValid);
       Assert.IsFalse(field.HasArgument);
@@ -34,7 +40,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void Invalid04()
     {
-      var field = GCodeField.TryParse("X-.tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse("X-.tail", out var tail);
 
       Assert.IsFalse(field.IsValid);
       Assert.IsFalse(field.HasArgument);
@@ -44,7 +50,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void Invalid05()
     {
-      var field = GCodeField.TryParse("X-tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse("X-tail", out var tail);
 
       Assert.IsFalse(field.IsValid);
       Assert.IsFalse(field.HasArgument);
@@ -54,7 +60,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void Invalid06()
     {
-      var field = GCodeField.TryParse("endsub".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse("endsub", out var tail);
 
       Assert.IsFalse(field.IsValid);
       Assert.IsFalse(field.HasArgument);
@@ -64,8 +70,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void NoArgument01()
     {
-      var trivial = GCodeField.TryParse(
-        "X".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var trivial = Parse("X", out var tail);
 
       Assert.IsTrue(trivial.IsValid);
       Assert.IsFalse(trivial.HasArgument);
@@ -78,8 +83,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void NoArgument02()
     {
-      var trivial = GCodeField.TryParse(
-        "X \t".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var trivial = Parse("X \t", out var tail);
 
       Assert.IsTrue(trivial.IsValid);
       Assert.IsFalse(trivial.HasArgument);
@@ -92,8 +96,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void NoArgument03()
     {
-      var trivial = GCodeField.TryParse(
-        "X\t Y".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var trivial = Parse("X\t Y", out var tail);
 
       Assert.IsTrue(trivial.IsValid);
       Assert.IsFalse(trivial.HasArgument);
@@ -106,8 +109,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void NoArgument04()
     {
-      var field = GCodeField.TryParse(
-        "X\t -Y".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse("X\t -Y", out var tail);
 
       Assert.IsTrue(field.IsValid);
       Assert.IsFalse(field.HasArgument);
@@ -120,7 +122,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void NoArgument05()
     {
-      var field = GCodeField.TryParse("X 9876543210".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse("X 9876543210", out var tail);
 
       Assert.IsTrue(field.IsValid);
       Assert.IsFalse(field.HasArgument);
@@ -133,8 +135,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void NoArgument06()
     {
-      var field = GCodeField.TryParse(
-        "X\t .Y".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse("X\t .Y", out var tail);
 
       Assert.IsTrue(field.IsValid);
       Assert.IsFalse(field.HasArgument);
@@ -147,17 +148,17 @@ namespace VMotion.Tests.GCode
     [Test]
     public void CaseToNormalization()
     {
-      var toUpper = GCodeField.TryParse(
+      var toUpper = GCodeFieldSpan.TryParse(
         "x".AsSpan(), out _, new GCodeParsingSettings(caseNormalization: GCodeCaseNormalization.ToUppercase));
 
       Assert.AreEqual('X', toUpper.Word);
 
-      var toLower = GCodeField.TryParse(
+      var toLower = GCodeFieldSpan.TryParse(
         "X".AsSpan(), out _, new GCodeParsingSettings(caseNormalization: GCodeCaseNormalization.ToLowercase));
 
       Assert.AreEqual(toLower.Word, 'x');
 
-      var doNotTouch = GCodeField.TryParse(
+      var doNotTouch = GCodeFieldSpan.TryParse(
         "x".AsSpan(), out _, new GCodeParsingSettings(caseNormalization: GCodeCaseNormalization.DoNotTouch));
 
       Assert.AreEqual(doNotTouch.Word, 'x');
@@ -166,7 +167,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void IntArgument01([Range(0, 5)] int scale)
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "*123y1".AsSpan(), out var tail,
         new GCodeParsingSettings(integerArgumentScale: scale));
 
@@ -186,7 +187,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void IntArgument02([Range(0, 5)] int scale)
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "Y-42tail".AsSpan(), out var tail,
         new GCodeParsingSettings(integerArgumentScale: scale));
 
@@ -205,7 +206,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void IntArgument03()
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "Y + 2147483647 tail".AsSpan(), out var tail,
         new GCodeParsingSettings(integerArgumentScale: 0));
 
@@ -224,8 +225,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void IntArgument04()
     {
-      var field = GCodeField.TryParse(
-        "Y    -\t2147483647 tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse("Y    -\t2147483647 tail", out var tail);
 
       Assert.IsTrue(field.IsValid);
       Assert.IsTrue(field.HasArgument);
@@ -242,7 +242,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void IntArgument05()
     {
-      var field = GCodeField.TryParse("X9876543210tail".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse("X9876543210tail", out var tail);
 
       Assert.IsFalse(field.IsValid); // overflow
       Assert.AreEqual("X9876543210tail", tail.ToString());
@@ -251,7 +251,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void RealArgument01([Range(0, 5)] int scale)
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "Z1.2tail".AsSpan(), out var tail,
         new GCodeParsingSettings(integerArgumentScale: scale));
 
@@ -270,7 +270,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void RealArgument02([Range(0, 5)] int scale)
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "Z42.tail".AsSpan(), out var tail,
         new GCodeParsingSettings(integerArgumentScale: scale));
 
@@ -289,7 +289,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void RealArgument03([Range(0, 5)] int scale)
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "Z.42tail".AsSpan(), out var tail,
         new GCodeParsingSettings(integerArgumentScale: scale));
 
@@ -308,7 +308,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void RealArgument04([Range(0, 5)] int scale)
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "Z-42.tail".AsSpan(), out var tail,
         new GCodeParsingSettings(integerArgumentScale: scale));
 
@@ -327,7 +327,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void RealArgument05([Range(0, 5)] int scale)
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "Z-.42tail".AsSpan(), out var tail,
         new GCodeParsingSettings(integerArgumentScale: scale));
 
@@ -346,7 +346,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void RealArgument06([Range(0, 5)] int scale)
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "Z-123.42tail".AsSpan(), out var tail,
         new GCodeParsingSettings(integerArgumentScale: scale));
 
@@ -365,7 +365,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void RealArgument07([Range(0, 5)] int scale)
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "Z - 12 . 3tail".AsSpan(), out var tail,
         new GCodeParsingSettings(integerArgumentScale: scale));
 
@@ -384,7 +384,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void RealArgument08([Range(0, 5)] int scale)
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "Z - 12 .tail".AsSpan(), out var tail,
         new GCodeParsingSettings(integerArgumentScale: scale));
 
@@ -403,7 +403,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void RealArgument09([Range(0, 5)] int scale)
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "Z - . 34tail".AsSpan(), out var tail,
         new GCodeParsingSettings(integerArgumentScale: scale));
 
@@ -422,7 +422,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void RealArgument10([Range(0, 5)] int scale)
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "Z . 34tail".AsSpan(), out var tail,
         new GCodeParsingSettings(integerArgumentScale: scale));
 
@@ -441,7 +441,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void RealArgument11()
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "X-.1tail".AsSpan(), out var tail, new GCodeParsingSettings(integerArgumentScale: 2));
 
       Assert.IsTrue(field.IsValid);
@@ -460,7 +460,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void StringArgument01()
     {
-      var field = GCodeField.TryParse("S\"abc\" Y".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse("S\"abc\" Y", out var tail);
 
       Assert.IsTrue(field.IsValid);
       Assert.IsTrue(field.HasArgument);
@@ -473,7 +473,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void StringArgument02()
     {
-      var field = GCodeField.TryParse("S \"def\"aa".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse("S \"def\"aa", out var tail);
 
       Assert.IsTrue(field.IsValid);
       Assert.IsTrue(field.HasArgument);
@@ -486,7 +486,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void StringArgument03()
     {
-      var field = GCodeField.TryParse("S \"def".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse("S \"def", out var tail);
 
       Assert.IsTrue(field.IsValid);
       Assert.IsTrue(field.HasArgument);
@@ -499,7 +499,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void StringArgument04()
     {
-      var field = GCodeField.TryParse("S\"foo\"\"bar\"t".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse("S\"foo\"\"bar\"t", out var tail);
 
       Assert.IsTrue(field.IsValid);
       Assert.IsTrue(field.HasArgument);
@@ -512,7 +512,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void StringArgument05()
     {
-      var field = GCodeField.TryParse("S\"Foo'Bar\"t".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse("S\"Foo'Bar\"t", out var tail);
 
       Assert.IsTrue(field.IsValid);
       Assert.IsTrue(field.HasArgument);
@@ -525,7 +525,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void StringArgument06()
     {
-      var field = GCodeField.TryParse("S\"Foo'Bar'".AsSpan(), out var tail,
+      var field = GCodeFieldSpan.TryParse("S\"Foo'Bar'".AsSpan(), out var tail,
         new GCodeParsingSettings(enableSingleQuoteEscapingInStringLiterals: true));
 
       Assert.IsTrue(field.IsValid);
@@ -539,7 +539,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void StringArgument07()
     {
-      var field = GCodeField.TryParse("S\"'Foo''Bar".AsSpan(), out var tail,
+      var field = GCodeFieldSpan.TryParse("S\"'Foo''Bar".AsSpan(), out var tail,
         new GCodeParsingSettings(enableSingleQuoteEscapingInStringLiterals: true));
 
       Assert.IsTrue(field.IsValid);
@@ -553,7 +553,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void CodeArgument01()
     {
-      var field = GCodeField.TryParse("G0 X0".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse("G0 X0", out var tail);
 
       Assert.IsTrue(field.IsValid);
       Assert.IsTrue(field.HasArgument);
@@ -567,7 +567,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void CodeArgument02()
     {
-      var field = GCodeField.TryParse("G1 X0 Y0".AsSpan(), out var tail, GCodeParsingSettings.Default);
+      var field = Parse("G1 X0 Y0", out var tail);
 
       Assert.IsTrue(field.IsValid);
       Assert.IsTrue(field.HasArgument);
@@ -581,7 +581,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void CodeArgument03()
     {
-      var field = GCodeField.TryParse("G1.42".AsSpan(), out _, GCodeParsingSettings.Default);
+      var field = Parse("G1.42", out _);
 
       Assert.IsTrue(field.IsValid);
       Assert.AreEqual('G', field.Word);
@@ -592,7 +592,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void IntScaling01()
     {
-      var field = GCodeField.TryParse("Y-123 ".AsSpan(), out var tail,
+      var field = GCodeFieldSpan.TryParse("Y-123 ".AsSpan(), out var tail,
         new GCodeParsingSettings(integerArgumentScale: 1));
 
       Assert.IsTrue(field.HasArgument);
@@ -607,7 +607,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void IntScaling02()
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "X214748364".AsSpan(), out _, new GCodeParsingSettings(integerArgumentScale: 1));
 
       Assert.IsTrue(field.HasArgument);
@@ -621,7 +621,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void IntScaling03()
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "X214748365".AsSpan(), out _, new GCodeParsingSettings(integerArgumentScale: 1));
 
       Assert.IsTrue(field.HasArgument);
@@ -641,7 +641,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void IntScaling04()
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "X21474836".AsSpan(), out _, new GCodeParsingSettings(integerArgumentScale: 2));
 
       Assert.IsTrue(field.HasArgument);
@@ -655,7 +655,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void IntScaling05()
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "X21474837".AsSpan(), out _, new GCodeParsingSettings(integerArgumentScale: 2));
 
       Assert.IsTrue(field.HasArgument);
@@ -675,7 +675,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void IntScaling06()
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "X21474".AsSpan(), out _, new GCodeParsingSettings(integerArgumentScale: 5));
 
       Assert.IsTrue(field.HasArgument);
@@ -689,7 +689,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void IntScaling07()
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "X21475".AsSpan(), out _, new GCodeParsingSettings(integerArgumentScale: 5));
 
       Assert.IsTrue(field.HasArgument);
@@ -709,7 +709,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void RealScaling01()
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "X+214.74".AsSpan(), out _, new GCodeParsingSettings(integerArgumentScale: 5));
 
       Assert.IsTrue(field.HasArgument);
@@ -723,7 +723,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void RealScaling02()
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "X-214.748364".AsSpan(), out _, new GCodeParsingSettings(integerArgumentScale: 5));
 
       Assert.IsTrue(field.HasArgument);
@@ -737,7 +737,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void RealScaling03()
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "X+21474.83647".AsSpan(), out _, new GCodeParsingSettings(integerArgumentScale: 5));
 
       Assert.AreEqual(21474, field.IntArgument);
@@ -750,7 +750,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void RealScaling04()
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "X+21474.83648".AsSpan(), out _, new GCodeParsingSettings(integerArgumentScale: 5));
 
       Assert.AreEqual(21474, field.IntArgument);
@@ -769,7 +769,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void RealScaling05()
     {
-      var field = GCodeField.TryParse(
+      var field = GCodeFieldSpan.TryParse(
         "X+21474.8364789".AsSpan(), out _, new GCodeParsingSettings(integerArgumentScale: 5));
 
       Assert.AreEqual(21474, field.IntArgument);

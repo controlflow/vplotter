@@ -1,22 +1,20 @@
 using System;
-using System.Buffers;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 using JetBrains.Annotations;
 
-namespace VPlotter.GCode
+namespace VPlotter.GCode.Reader
 {
   [PublicAPI]
   [DebuggerDisplay("{ToString(),raw}")]
   [StructLayout(LayoutKind.Auto)]
-  public readonly ref struct GCodeCommand
+  public readonly ref struct GCodeCommandSpan
   {
     // [8 bits] command word, [8 bits] subcode number, [16 bits] code number
     public readonly Code Code;
 
-    private readonly GCodeParsingSettings myParsingSettings;
+    private readonly GCodeParsingSettings mySettings;
     private readonly ReadOnlySpan<char> myRawFields;
 
     public bool IsValid => Word != 0;
@@ -36,19 +34,19 @@ namespace VPlotter.GCode
     /// </summary>
     public int SubCodeNumber => (byte) ((uint) Code >> 16);
 
-    private GCodeCommand(Code code, ReadOnlySpan<char> rawFields, GCodeParsingSettings settings)
+    private GCodeCommandSpan(Code code, ReadOnlySpan<char> rawFields, GCodeParsingSettings settings)
     {
       Code = code;
       myRawFields = rawFields;
-      myParsingSettings = settings;
+      mySettings = settings;
     }
 
     [Pure]
-    public GCodeField TryGetField(char word)
+    public GCodeFieldSpan TryGetField(char word)
     {
       for (var fields = myRawFields; ; )
       {
-        var field = GCodeField.TryParse(fields, out fields, myParsingSettings);
+        var field = GCodeFieldSpan.TryParse(fields, out fields, mySettings);
         if (field.Word == default) break;
         if (field.Word == word) return field;
       }
@@ -67,10 +65,10 @@ namespace VPlotter.GCode
       private readonly GCodeParsingSettings mySettings;
       private readonly ReadOnlySpan<char> myRawFields;
 
-      public FieldsEnumerable(in GCodeCommand command)
+      public FieldsEnumerable(in GCodeCommandSpan commandSpan)
       {
-        mySettings = command.myParsingSettings;
-        myRawFields = command.myRawFields;
+        mySettings = commandSpan.mySettings;
+        myRawFields = commandSpan.myRawFields;
       }
 
       public FieldsEnumerator GetEnumerator() => new FieldsEnumerator(in this);
@@ -79,7 +77,7 @@ namespace VPlotter.GCode
       {
         private readonly GCodeParsingSettings mySettings;
         private ReadOnlySpan<char> myTail;
-        private GCodeField myCurrent;
+        private GCodeFieldSpan myCurrent;
 
         public FieldsEnumerator(in FieldsEnumerable enumerable)
         {
@@ -91,11 +89,11 @@ namespace VPlotter.GCode
         public bool MoveNext()
         {
           // todo: skip comments?
-          myCurrent = GCodeField.TryParse(myTail.SkipWhitespace(), out myTail, mySettings);
+          myCurrent = GCodeFieldSpan.TryParse(myTail.SkipWhitespace(), out myTail, mySettings);
           return myCurrent.IsValid;
         }
 
-        public readonly GCodeField Current => myCurrent;
+        public readonly GCodeFieldSpan Current => myCurrent;
       }
     }
 
@@ -111,19 +109,19 @@ namespace VPlotter.GCode
     }
 
     [Pure]
-    public static GCodeCommand TryParse(ReadOnlySpan<char> line, GCodeParsingSettings settings)
+    public static GCodeCommandSpan TryParse(ReadOnlySpan<char> line, GCodeParsingSettings settings)
     {
       if (line.Length == 0) return default;
 
-      GCodeComment.TryParse(line.SkipWhitespace(), out line);
+      GCodeCommentSpan.TryParse(line.SkipWhitespace(), out line);
 
-      var firstField = GCodeField.TryParse(line, out var rawArguments, settings);
+      var firstField = GCodeFieldSpan.TryParse(line, out var rawArguments, settings);
       if (!firstField.IsValid) return default;
 
       var code = firstField.CodeArgument;
       if (code == Code.Invalid) return default;
 
-      return new GCodeCommand(code, rawArguments.SkipWhitespace(), settings);
+      return new GCodeCommandSpan(code, rawArguments.SkipWhitespace(), settings);
     }
 
     public override string ToString()

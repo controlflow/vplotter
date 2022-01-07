@@ -19,8 +19,4 @@
       <ProjectReference Include="..\vmotion\vmotion.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="GCode\Reader" />
-    </ItemGroup>
-
 </Project>

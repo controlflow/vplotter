@@ -1,6 +1,7 @@
 using System;
 using NUnit.Framework;
 using VPlotter.GCode;
+using VPlotter.GCode.Reader;
 
 namespace VMotion.Tests.GCode
 {
@@ -10,7 +11,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void Empty()
     {
-      var command = GCodeCommand.TryParse("".AsSpan(), new GCodeParsingSettings());
+      var command = GCodeCommandSpan.TryParse("".AsSpan(), new GCodeParsingSettings());
 
       Assert.IsFalse(command.IsValid);
       Assert.AreEqual(Code.Invalid, command.Code);
@@ -25,7 +26,7 @@ namespace VMotion.Tests.GCode
     [Test]
     public void Simple()
     {
-      var command = GCodeCommand.TryParse("G0 X0 Y1".AsSpan(), new GCodeParsingSettings());
+      var command = GCodeCommandSpan.TryParse("G0 X0 Y1".AsSpan(), new GCodeParsingSettings());
 
       Assert.IsTrue(command.IsValid);
       Assert.AreEqual(Code.G0_RapidMove, command.Code);

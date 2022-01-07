@@ -6,14 +6,14 @@ namespace VPlotter.GCode
   [PublicAPI]
   public sealed class GCodeParsingSettings
   {
-    public static readonly GCodeParsingSettings Default = new GCodeParsingSettings();
+    public static readonly GCodeParsingSettings Default = new();
 
     public GCodeParsingSettings(
       GCodeCaseNormalization caseNormalization = GCodeCaseNormalization.ToUppercase,
       int integerArgumentScale = 0,
       bool enableSingleQuoteEscapingInStringLiterals = false)
     {
-      if (integerArgumentScale < 0 || integerArgumentScale > 5)
+      if (integerArgumentScale is < 0 or > 5)
         throw new ArgumentOutOfRangeException(nameof(integerArgumentScale));
 
       CaseNormalization = caseNormalization;

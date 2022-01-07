@@ -2,11 +2,11 @@ using System;
 using System.Runtime.InteropServices;
 using JetBrains.Annotations;
 
-namespace VPlotter.GCode
+namespace VPlotter.GCode.Reader
 {
   [PublicAPI]
   [StructLayout(LayoutKind.Auto)]
-  public readonly ref struct GCodeComment
+  public readonly ref struct GCodeCommentSpan
   {
     public readonly ReadOnlySpan<char> Raw;
 
@@ -44,20 +44,20 @@ namespace VPlotter.GCode
 
     public bool IsValid => Raw.Length > 0;
 
-    private GCodeComment(ReadOnlySpan<char> comment)
+    private GCodeCommentSpan(ReadOnlySpan<char> comment)
     {
       Raw = comment;
     }
 
     [Pure]
-    public static GCodeComment TryParse(ReadOnlySpan<char> line, out ReadOnlySpan<char> tail)
+    public static GCodeCommentSpan TryParse(ReadOnlySpan<char> line, out ReadOnlySpan<char> tail)
     {
       switch (line.FirstOrDefault())
       {
         case ';':
         {
           tail = ReadOnlySpan<char>.Empty;
-          return new GCodeComment(line);
+          return new GCodeCommentSpan(line);
         }
 
         case '(':
@@ -67,13 +67,13 @@ namespace VPlotter.GCode
             if (line[index] == ')')
             {
               tail = line[(index + 1)..];
-              return new GCodeComment(line[..(index + 1)]);
+              return new GCodeCommentSpan(line[..(index + 1)]);
             }
           }
 
           // unfinished comment
           tail = ReadOnlySpan<char>.Empty;
-          return new GCodeComment(line);
+          return new GCodeCommentSpan(line);
         }
 
         default:

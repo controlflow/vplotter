@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace VPlotter
+namespace VPlotter.GCode.Reader
 {
   public sealed class LineByLineStreamReader : IDisposable
   {
@@ -22,6 +22,8 @@ namespace VPlotter
       myTextReader = new StreamReader(source, encoding);
       myLineBuffer = new Memory<char>(array: new char[1000]);
     }
+
+
 
     public bool ReadNextLine(out ReadOnlySpan<char> line)
     {
@@ -105,16 +107,4 @@ namespace VPlotter
       myTextReader.Dispose();
     }
   }
-
-  /*
-   * GCode command
-   *   Can be comment (skip those lines?)
-   *   Contains fields
-   *     Field has name
-   *     Integral/fractional numbers or strings
-   *
-   *   Can have line number
-   *   Can have checksum
-   *
-   */
 }
