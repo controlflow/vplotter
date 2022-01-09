@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using JetBrains.Annotations;
@@ -49,9 +50,50 @@ namespace VPlotter.GCode.Reader
         var field = GCodeFieldSpan.TryParse(fields, out fields, mySettings);
         if (field.Word == default) break;
         if (field.Word == word) return field;
+
+        fields = fields.SkipWhitespace(); // todo: skip comments
       }
 
       return default;
+    }
+
+    [Pure]
+    public GCodeFieldSpan GetOptionalField(char word, string defaultField)
+    {
+      var field = TryGetField(word);
+      if (field.IsValid) return field;
+
+      var defaultFieldSpan = GCodeFieldSpan.TryParse(defaultField, out var tail, mySettings);
+      if (defaultFieldSpan.Word != word) WrongDefaultField(word);
+      if (!tail.IsEmpty) WrongDefaultFieldTail(tail);
+
+      return defaultFieldSpan;
+
+      [MethodImpl(MethodImplOptions.NoInlining)]
+      static void WrongDefaultField(char word)
+      {
+        throw new ArgumentException($"Default field representation must start from '{word}'");
+      }
+
+      [MethodImpl(MethodImplOptions.NoInlining)]
+      static void WrongDefaultFieldTail(ReadOnlySpan<char> tail)
+      {
+        throw new ArgumentException($"Unexpected tail after default field parsing '{tail.ToString()}'");
+      }
+    }
+
+    [Pure]
+    public int GetIntFieldOrDefault(char word, int defaultValue)
+    {
+      var field = TryGetField(word);
+      return field.IsValid ? field.IntArgument : defaultValue;
+    }
+
+    [Pure]
+    public int GetScaledIntFieldOrDefault(char word, int scaledDefaultValue)
+    {
+      var field = TryGetField(word);
+      return field.IsValid ? field.ScaledIntArgument : scaledDefaultValue;
     }
 
     // todo: command.Read('X', 'Y', 'Z', ref tuple)?
@@ -60,6 +102,8 @@ namespace VPlotter.GCode.Reader
     public FieldsEnumerable Fields => new(in this);
 
     // todo: debug view
+    // todo: indexer?
+    [DebuggerTypeProxy(typeof(GCodeCommandFieldsDebug))]
     public readonly ref struct FieldsEnumerable
     {
       private readonly GCodeParsingSettings mySettings;
@@ -163,6 +207,19 @@ namespace VPlotter.GCode.Reader
           _       => 5
         };
       }
+    }
+  }
+
+  internal class GCodeCommandFieldsDebug
+  {
+    public GCodeCommandFieldsDebug(GCodeCommandSpan.FieldsEnumerable fields)
+    {
+      foreach (var span in fields)
+      {
+
+      }
+
+      // ???
     }
   }
 }

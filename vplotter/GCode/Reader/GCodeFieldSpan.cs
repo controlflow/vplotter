@@ -8,31 +8,33 @@ using JetBrains.Annotations;
 
 namespace VPlotter.GCode.Reader
 {
+  // todo: drop payload2
+
   [PublicAPI]
   [StructLayout(LayoutKind.Auto)]
   [DebuggerDisplay("{ToString(),raw}")]
   public readonly ref struct GCodeFieldSpan
   {
-    private readonly char myWord; // 2 bytes
+    private readonly byte myWord; // 1 byte
     private readonly ArgumentKind myKind; // 1 byte
     private readonly int myPayload1; // 4 bytes
     private readonly int myPayload2; // 4 bytes
     private readonly ReadOnlySpan<char> myRaw; // 4/8 bytes + 4 byte + 4 bytes padding
 
-    private GCodeFieldSpan(
-      char word, ReadOnlySpan<char> raw, ArgumentKind kind)
-    {
-      myWord = word;
-      myRaw = raw;
-      myKind = kind;
-      myPayload1 = 0;
-      myPayload2 = 0;
-    }
+    // private GCodeFieldSpan(
+    //   char word, ReadOnlySpan<char> raw, ArgumentKind kind)
+    // {
+    //   myWord = (byte) word;
+    //   myRaw = raw;
+    //   myKind = kind;
+    //   myPayload1 = 0;
+    //   myPayload2 = 0;
+    // }
 
     private GCodeFieldSpan(
       char word, ReadOnlySpan<char> raw, ArgumentKind kind, int payload1, int payload2)
     {
-      myWord = word;
+      myWord = (byte) word;
       myRaw = raw;
       myKind = kind;
       myPayload1 = payload1;
@@ -41,7 +43,8 @@ namespace VPlotter.GCode.Reader
 
     [ValueRange('a', 'z')]
     [ValueRange('A', 'Z')]
-    public char Word => myWord;
+    [ValueRange('*')]
+    public char Word => (char) myWord;
 
     public bool IsValid => myWord != default;
 
@@ -276,7 +279,7 @@ namespace VPlotter.GCode.Reader
         builder.Append(ch);
       }
 
-      return builder.ToString().AsSpan();
+      return builder.ToString();
     }
 
     public Code CodeArgument

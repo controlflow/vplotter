@@ -8,7 +8,7 @@ namespace VPlotter.GCode.Reader
   // https://github.com/synthetos/g2/wiki/GCode-Parsing
   // http://linuxcnc.org/docs/html/gcode/overview.html#_g_code_overview
 
-
+// todo: ISpanFormattable
 
   /*
    * GCode command

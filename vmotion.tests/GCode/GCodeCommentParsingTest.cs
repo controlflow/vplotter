@@ -9,7 +9,9 @@ namespace VMotion.Tests.GCode
   public class GCodeCommentParsingTest
   {
     private static GCodeCommentSpan Parse(string text, out ReadOnlySpan<char> tail)
-      => GCodeCommentSpan.TryParse(text.AsSpan(), out tail);
+    {
+      return GCodeCommentSpan.TryParse(text, out tail);
+    }
 
     [Test]
     public void NotComment()
